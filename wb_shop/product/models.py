@@ -45,6 +45,7 @@ class Product(PublicIdMixin, CreatedUpdatedMixin):
         'Дата удаления',
         null=True,
         blank=True,
+        editable=False,
     )
 
     class Meta:
