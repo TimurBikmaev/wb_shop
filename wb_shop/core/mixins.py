@@ -5,8 +5,8 @@ from core.utils import generate_public_id
 
 
 class CreatedUpdatedMixin(models.Model):
-    created_at = models.DateTimeField('Создан', auto_now_add=True)
-    updated_at = models.DateTimeField('Обновлен', auto_now=True)
+    created_at = models.DateTimeField('Дата создания', auto_now_add=True)
+    updated_at = models.DateTimeField('Дата обновления', auto_now=True)
 
     class Meta:
         abstract = True

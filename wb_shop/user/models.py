@@ -9,9 +9,14 @@ from user.constants import UserConstants
 
 
 class User(PublicIdMixin, CreatedUpdatedMixin, AbstractUser):
-    """Модель пользователя"""
+    """
+    Представляет пользователя в интернет-магазине.
+
+    Хранит информацию об email, имени, балансе
+    и дате добавления и обновления профиля.
+    """
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS: List = []
+    REQUIRED_FIELDS: List[str] = []
 
     email = models.EmailField('Email', unique=True)
     first_name = models.CharField(
@@ -29,8 +34,8 @@ class User(PublicIdMixin, CreatedUpdatedMixin, AbstractUser):
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
 
-    def __str__(self):
+    def __str__(self) -> str:
         return f'{self.first_name} | {self.email}'
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f'<User(id={self.id}, email={self.email})>'
