@@ -2,7 +2,7 @@ from django.contrib.auth import get_user_model
 from django.core.validators import MinValueValidator
 from django.db import models
 
-from core.constants import BalanceConstants
+from core.constants import MoneyConstants
 from core.mixins import CreatedUpdatedMixin, PublicIdMixin
 from product.constants import (
     CartConstants,
@@ -36,10 +36,14 @@ class Product(PublicIdMixin, CreatedUpdatedMixin):
     )
     price = models.DecimalField(
         'Цена',
-        max_digits=BalanceConstants.MAX_DIGITS,
-        decimal_places=BalanceConstants.DECIMAL_PLACES,
+        max_digits=MoneyConstants.MAX_DIGITS,
+        decimal_places=MoneyConstants.DECIMAL_PLACES,
+        validators=[MinValueValidator(MoneyConstants.PRICE_MIN_VALUE)],
     )
-    quantity = models.PositiveIntegerField('Количество')
+    warehouse_quantity = models.PositiveIntegerField(
+        'Количество',
+        validators=[MinValueValidator(ProductConstants.QUANTITY_MIN_VALUE)],
+    )
     is_deleted = models.BooleanField('Удален ли', default=False)
     deleted_at = models.DateTimeField(
         'Дата удаления',
@@ -51,6 +55,7 @@ class Product(PublicIdMixin, CreatedUpdatedMixin):
     class Meta:
         verbose_name = 'Товар'
         verbose_name_plural = 'Товары'
+        db_table = 'product'
 
     def __str__(self) -> str:
         return f'{self.name[:ProductConstants.NAME_SHORT]} | {self.price}'
@@ -63,33 +68,20 @@ class Cart(PublicIdMixin, CreatedUpdatedMixin):
     """
     Покупная корзина пользователя.
 
-    Хранит информацию о пользователе, наименовании,
+    Хранит информацию о пользователе,
     дате создания и обновления корзины.
-
-    Предусматривает возможность создания нескольких корзин.
-    Пользователь не может дублировать названия корзин.
     """
-    user = models.ForeignKey(
+    user = models.OneToOneField(
         User,
         on_delete=models.CASCADE,
-        related_name='carts',
+        related_name='cart',
         verbose_name='Пользователь'
-    )
-    name = models.CharField(
-        'Название',
-        max_length=CartConstants.NAME_MAX_LENGTH,
-        default=CartConstants.DEFAULT_NAME,
     )
 
     class Meta:
         verbose_name = 'Корзина покупок'
         verbose_name_plural = 'Корзины покупок'
-        constraints = [
-            models.UniqueConstraint(
-                fields=['user', 'name'],
-                name='unique_cart_user_name_product',
-            ),
-        ]
+        db_table = 'cart'
 
     def __str__(self) -> str:
         return f'Корзина {self.public_id} | {self.user.email}'
@@ -117,12 +109,13 @@ class CartItem(models.Model):
         related_name='cart_items',
         verbose_name='Товар',
     )
-    product_quantity = models.PositiveIntegerField(
-        'Количество товара',
+    item_quantity = models.PositiveIntegerField(
+        'Количество позиций',
         validators=[MinValueValidator(CartConstants.PRODUCTS_IN_CART_MIN)]
     )
 
     class Meta:
+        db_table = 'cart_item'
         constraints = [
             models.UniqueConstraint(
                 fields=['cart', 'product'],
@@ -149,8 +142,9 @@ class Order(PublicIdMixin, CreatedUpdatedMixin):
     )
     total_price = models.DecimalField(
         'Сумма',
-        max_digits=BalanceConstants.MAX_DIGITS,
-        decimal_places=BalanceConstants.DECIMAL_PLACES,
+        max_digits=MoneyConstants.MAX_DIGITS,
+        decimal_places=MoneyConstants.DECIMAL_PLACES,
+        validators=[MinValueValidator(MoneyConstants.PRICE_MIN_VALUE)],
     )
     address = models.CharField(
         'Адрес',
@@ -163,6 +157,7 @@ class Order(PublicIdMixin, CreatedUpdatedMixin):
     )
 
     class Meta:
+        db_table = 'order'
         verbose_name = 'Заказ'
         verbose_name_plural = 'Заказы'
         ordering = ['-created_at']
@@ -196,18 +191,19 @@ class OrderItem(models.Model):
         related_name='order_items',
         verbose_name='Товар',
     )
-    product_quantity = models.PositiveIntegerField(
-        'Количество',
+    item_quantity = models.PositiveIntegerField(
+        'Количество позиций',
         validators=[MinValueValidator(OrderConstants.PRODUCTS_IN_ORDER_MIN)]
     )
-    product_name = models.CharField(
+    item_name = models.CharField(
         'Наименование в заказе',
         max_length=ProductConstants.NAME_MAX_LENGTH,
     )
-    product_price = models.DecimalField(
+    item_price = models.DecimalField(
         'Цена в заказе',
-        max_digits=BalanceConstants.MAX_DIGITS,
-        decimal_places=BalanceConstants.DECIMAL_PLACES,
+        max_digits=MoneyConstants.MAX_DIGITS,
+        decimal_places=MoneyConstants.DECIMAL_PLACES,
+        validators=[MinValueValidator(MoneyConstants.PRICE_MIN_VALUE)],
     )
 
     def save(self, *args, **kwargs):
@@ -216,11 +212,12 @@ class OrderItem(models.Model):
         наименование и цену продукта на момент оформления.
         """
         if self._state.adding and self.product:
-            self.product_name = self.product.name
-            self.product_price = self.product.price
+            self.item_name = self.product.name
+            self.item_price = self.product.price
         super().save(*args, **kwargs)
 
     class Meta:
+        db_table = 'order_item'
         constraints = [
             models.UniqueConstraint(
                 fields=['order', 'product'],

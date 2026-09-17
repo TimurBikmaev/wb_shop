@@ -1,7 +1,10 @@
+from datetime import timedelta
 import os
 from pathlib import Path
 
 from dotenv import load_dotenv
+
+from core.constants import LoggingConstants, TokenConstants
 
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -10,6 +13,40 @@ load_dotenv(BASE_DIR / '.env')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 DEBUG = os.getenv('DEBUG', 'false').lower() in ('true', '1', 't')
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+
+LOG_DIR = BASE_DIR / 'logs'
+LOG_DIR.mkdir(exist_ok=True)
+LOGGING = {
+    'version': LoggingConstants.CONFIG_VERSION,
+    'disable_existing_loggers': False,
+
+    'formatters': {
+        'log_style': {
+            'format': '{asctime} | {levelname} | {name} | {message}',
+            'style': '{',
+        },
+    },
+
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'log_style',
+        },
+        'file': {
+            'class': 'logging.handlers.RotatingFileHandler',
+            'filename': LOG_DIR / 'django.log',
+            'maxBytes': LoggingConstants.FILE_MAX_SIZE,
+            'backupCount': LoggingConstants.BACKUP_COUNT,
+            'formatter': 'log_style',
+            'encoding': 'utf-8',
+        },
+    },
+
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+}
 
 
 INSTALLED_APPS = [
@@ -22,8 +59,9 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'rest_framework',
     'drf_spectacular',
+    'rest_framework',
+    'rest_framework_simplejwt.token_blacklist',
 ]
 
 MIDDLEWARE = [
@@ -97,5 +135,27 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ],
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.OrderingFilter',
+    ],
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+DEFAULT_FROM_EMAIL = 'noreply@wbshop.com'
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(
+        # minutes=TokenConstants.EXPIRE_ACCESS_MINUTS,
+        days=5
+    ),
+    'REFRESH_TOKEN_LIFETIME': timedelta(
+        days=TokenConstants.EXPIRE_REFRESH_DAYS,
+    ),
+
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+
+    'AUTH_HEADER_TYPES': ('Bearer',),
 }

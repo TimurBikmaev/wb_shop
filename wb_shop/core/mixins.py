@@ -12,13 +12,13 @@ class CreatedUpdatedMixin(models.Model):
         abstract = True
 
 
-class PublicIdMixin:
+class PublicIdMixin(models.Model):
     public_id = models.CharField(
         'Public ID',
         max_length=PublicIdConstants.MAX_LENGTH,
         unique=True,
         default=generate_public_id,
-        editable=False
+        editable=False,
     )
 
     class Meta:

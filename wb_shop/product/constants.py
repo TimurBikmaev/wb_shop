@@ -16,6 +16,7 @@ class ProductConstants:
     DESCRIPTION_MAX_LENGTH = 1000
     NAME_MAX_LENGTH = 100
     NAME_SHORT = 20
+    QUANTITY_MIN_VALUE = 1
 
 
 class Status(TextChoices):
