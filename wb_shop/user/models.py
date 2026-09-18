@@ -33,7 +33,12 @@ class CustomUserManager(BaseUserManager):
             password,
             **extra_fields,
     ) -> AbstractUser:
-        """Создает и сохраняет администратора."""
+        """
+        Создает и сохраняет администратора.
+
+        Администратору также необходимо создать
+        свою корзину через django shell.
+        """
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
 

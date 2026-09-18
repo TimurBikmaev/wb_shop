@@ -4,6 +4,7 @@ from django.db.models import TextChoices
 class CartConstants:
     DEFAULT_NAME = 'Основная'
     NAME_MAX_LENGTH = 100
+    ONE_ITEM = 1
     PRODUCTS_IN_CART_MIN = 1
 
 

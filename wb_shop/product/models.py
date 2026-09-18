@@ -111,7 +111,8 @@ class CartItem(models.Model):
     )
     item_quantity = models.PositiveIntegerField(
         'Количество позиций',
-        validators=[MinValueValidator(CartConstants.PRODUCTS_IN_CART_MIN)]
+        validators=[MinValueValidator(CartConstants.PRODUCTS_IN_CART_MIN)],
+        default=CartConstants.PRODUCTS_IN_CART_MIN,
     )
 
     class Meta:

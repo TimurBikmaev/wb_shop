@@ -13,6 +13,7 @@ load_dotenv(BASE_DIR / '.env')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 DEBUG = os.getenv('DEBUG', 'false').lower() in ('true', '1', 't')
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
 
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)

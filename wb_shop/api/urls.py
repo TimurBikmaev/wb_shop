@@ -14,6 +14,7 @@ router_v1 = DefaultRouter()
 router_v1.register('auth', views.AuthViewSet, basename='auth')
 router_v1.register('users', views.UserViewSet, basename='users')
 router_v1.register('products', views.ProductViewSet, basename='products')
+router_v1.register('cart', views.CartViewSet, basename='cart')
 # router_v1.register(
 #     rf'posts/(?P<post_id>{PublicIdConstants.URL_REGEX})/comments',
 #     views.CommentViewSet,

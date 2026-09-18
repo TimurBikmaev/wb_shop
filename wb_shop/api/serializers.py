@@ -80,34 +80,42 @@ class ProductAdminSerializer(BaseSerializerMixin):
         read_only_fields = ['is_deleted']
 
 
-# class CartItemSerializer(serializers.ModelSerializer):
-#     """
-#     Отображение позиций в корзине покупок.
+class PatchCartItemSerializer(serializers.ModelSerializer):
+    """Изменение количества позиций одного товара."""
 
-#     Включает публичный id, наименование,
-#     количество в корзине и цену продукта.
-#     """
-#     public_id = serializers.ReadOnlyField(source='product.public_id')
-#     name = serializers.ReadOnlyField(source='product.name')
-#     price = serializers.ReadOnlyField(source='product.price')
-
-#     class Meta:
-#         model = CartItem
-#         fields = ['public_id', 'name', 'item_quantity', 'price']
+    class Meta:
+        model = CartItem
+        fields = ['item_quantity']
 
 
-# class CartSerializer(serializers.ModelSerializer):
-#     """
-#     Отображение корзины покупок.
+class CartItemSerializer(serializers.ModelSerializer):
+    """
+    Отображение позиций в корзине покупок.
 
-#     Включает добавленные товары, общую стоимость,
-#     даты создания и обновления.
-#     """
-#     products = CartItemSerializer(many=True)
+    Включает публичный id, наименование,
+    количество в корзине и цену продукта.
+    """
+    public_id = serializers.ReadOnlyField(source='product.public_id')
+    name = serializers.ReadOnlyField(source='product.name')
+    price = serializers.ReadOnlyField(source='product.price')
 
-#     class Meta:
-#         model = Cart
-#         fields = ['products', 'total_price', 'created_at', 'updated_at']
+    class Meta(PatchCartItemSerializer.Meta):
+        fields = ['public_id', 'name', 'item_quantity', 'price']
+
+
+class CartSerializer(serializers.ModelSerializer):
+    """
+    Отображение корзины покупок.
+
+    Включает добавленные товары, общую стоимость,
+    даты создания и обновления.
+    """
+    products = CartItemSerializer(many=True)
+    total_price = ...
+
+    class Meta:
+        model = Cart
+        fields = ['products', 'total_price', 'created_at', 'updated_at']
 
 
 class ShortUserSerializer(serializers.ModelSerializer):
