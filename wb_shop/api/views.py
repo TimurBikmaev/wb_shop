@@ -4,7 +4,9 @@ from django.contrib.auth import get_user_model, logout
 from django.core.mail import send_mail
 from django.db.models import Count, Exists, OuterRef, Prefetch, Q, Value
 from django.shortcuts import get_object_or_404, redirect
+from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
+
 from drf_spectacular import utils as swg
 from rest_framework import mixins, permissions, status
 from rest_framework.decorators import action
@@ -19,7 +21,7 @@ from api import serializers
 from api.constants import MsgConstants as MSG
 from api.mixins import LookupMixin
 from api.validators import AuthValidator
-from product.models import Product
+from product.models import Cart, CartItem, Product, Order
 from user.models import VarificationCode
 from user.services import send_email_code
 from user.utils import generate_code
@@ -55,6 +57,12 @@ class ProductViewSet(LookupMixin, ModelViewSet):
     #     ]
 
     def get_serializer_class(self):
+        """
+        Разделение для обычного пользователя и админаистратора.
+
+        Обычному пользователю доступно только чтение.
+        Администратору доступны все действия.
+        """
         user = self.request.user
 
         if user.is_authenticated and user.is_superuser:
@@ -65,6 +73,82 @@ class ProductViewSet(LookupMixin, ModelViewSet):
         if self.action == 'list':
             return serializers.ProductListSerializer
         return serializers.ProductDetailSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        """Реализация soft-delete."""
+        id = kwargs['public_id']
+        product = get_object_or_404(Product, id=id)
+
+        product.is_deleted = True
+        product.deleted_at = timezone.now()
+        product.save(update_fields=["is_deleted", "deleted_at"])
+
+        return Response(
+            {'detail': 'Товар удален.'},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class CartViewSet(
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet,
+):
+    model = Cart
+    # filter_backends = [DjangoFilterBackend, OrderingFilter]
+    # ordering_fields = ['likes_count', 'comments_count']
+    # ordering = ['-created_at']
+    # parser_classes = [MultiPartParser, JSONParser]
+
+    def get_queryset(self):
+        """Возвращает содержимое корзины пользователя."""
+        user = self.request.user
+        cart = get_object_or_404(Cart, user=user)
+
+        return cart.items.all()
+
+    def destroy(self, request, *args, **kwargs):
+        """Очистка корзины."""
+        user = self.request.user
+        cart = get_object_or_404(Cart, user=user)
+
+        cart.items.all().delete()
+
+        return Response(
+            {'detail': 'Корзина очищена.'},
+            status=status.HTTP_204_NO_CONTENT,
+        )
+
+
+class CartItemViewSet(
+    mixins.ListModelMixin,
+    mixins.DestroyModelMixin,
+    GenericViewSet,
+):
+    model = CartItem
+    # filter_backends = [DjangoFilterBackend, OrderingFilter]
+    # ordering_fields = ['likes_count', 'comments_count']
+    # ordering = ['-created_at']
+    # parser_classes = [MultiPartParser, JSONParser]
+
+    def get_queryset(self):
+        """Возвращает содержимое корзины пользователя."""
+        user = self.request.user
+        cart = get_object_or_404(Cart, user=user)
+
+        return cart.items.all()
+
+    def destroy(self, request, *args, **kwargs):
+        """Очистка корзины."""
+        user = self.request.user
+        cart = get_object_or_404(Cart, user=user)
+
+        cart.items.all().delete()
+
+        return Response(
+            {'detail': 'Корзина очищена.'},
+            status=status.HTTP_204_NO_CONTENT,
+        )
 
 
 class UserViewSet(LookupMixin, ModelViewSet):
