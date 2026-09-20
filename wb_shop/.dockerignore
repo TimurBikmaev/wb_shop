@@ -166,8 +166,3 @@ __marimo__/
 
 # Logs
 logs/
-
-# Project requirements
-migrations/
-project_guide/
-exp.py

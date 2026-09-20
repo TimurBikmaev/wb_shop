@@ -1,3 +1,4 @@
+import logging
 from decimal import Decimal
 
 from django.db import transaction
@@ -7,6 +8,8 @@ from rest_framework.exceptions import ValidationError
 
 from core.constants import MoneyConstants
 from product.models import Cart, CartItem, Order, OrderItem, Product
+
+logger = logging.getLogger(__name__)
 
 
 class CartOrderService:
@@ -23,6 +26,15 @@ class CartOrderService:
             ),
             user=user
         )
+
+    @staticmethod
+    def get_cart_item(user, product_public_id: str) -> tuple:
+        """Проверяет и возвращает корзину, товар и его позицию в корзине.."""
+        cart = get_object_or_404(Cart, user=user)
+        product = get_object_or_404(Product, public_id=product_public_id)
+        item = get_object_or_404(CartItem, cart=cart, product=product)
+
+        return cart, product, item
 
     @staticmethod
     def sum_items_total_price(cart_items: list) -> Decimal:
@@ -69,8 +81,8 @@ class CartOrderService:
             OrderItem(
                 order=order,
                 product=item.product,
-                item_public_id=item.product.public_id,
-                item_name=item.product.name,
+                public_id=item.product.public_id,
+                name=item.product.name,
                 item_quantity=item.item_quantity,
                 item_price=item.product.price,
                 item_total=item.item_quantity * item.product.price
@@ -88,6 +100,12 @@ class CartOrderService:
 
         user.balance -= total_price
         user.save(update_fields=['balance'])
+
+        logger.info(
+            'Создан заказ %s пользователем %s',
+            order.public_id,
+            user.public_id,
+        )
 
         return order
 

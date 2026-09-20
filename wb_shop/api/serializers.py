@@ -1,9 +1,6 @@
-from decimal import Decimal
-
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.validators import RegexValidator
-from django.shortcuts import get_object_or_404
 from rest_framework import serializers
 from rest_framework.serializers import ValidationError
 
@@ -14,10 +11,9 @@ from api.mixins import (
     TotalPriceSerializerMixin,
 )
 from core.constants import MoneyConstants
-from product.constants import Status
+from product.constants import OrderConstants, ProductConstants, Status
 from product.models import Cart, CartItem, Order, OrderItem, Product
 from user.constants import AuthConstants, UserConstants
-
 
 User = get_user_model()
 
@@ -26,7 +22,7 @@ class ShortProductSerializer(serializers.ModelSerializer):
     """
     Краткое отображения товаров.
 
-    Включает публичный id, наименование и количество.
+    Включает публичный id, наименование.
     """
 
     class Meta:
@@ -38,7 +34,8 @@ class ProductListSerializer(serializers.ModelSerializer):
     """
     Отображение каталога товаров для обычного пользователя.
 
-    Включает поля ShortProduct и цену, количество статус удаления.
+    Включает публичный id, наименование, цену,
+    количество на складе и статус удаления.
     """
 
     class Meta(ShortProductSerializer.Meta):
@@ -82,6 +79,11 @@ class ProductAdminSerializer(ExcudeNoneSerializerMixin):
     Обязательные поля при создании: наименование, описание, цена, количество.
     Обновить можно те же поля.
     """
+    name = serializers.CharField(
+        min_length=ProductConstants.NAME_MIN_LENGTH,
+        max_length=ProductConstants.NAME_MAX_LENGTH,
+        allow_blank=False,
+    )
 
     class Meta(ProductAdminListSerializer.Meta):
         fields = ProductAdminListSerializer.Meta.fields + ['description']
@@ -114,21 +116,34 @@ class CartSerializer(TotalPriceSerializerMixin):
     """
     Отображение корзины покупок.
 
-    Включает добавленные товары, общую стоимость,
-    даты создания и обновления.
+    Включает добавленные товары и общую стоимость.
     """
-    products = CartItemSerializer(many=True, source='items')
+    products = CartItemSerializer(
+        many=True,
+        source='items',
+        read_only=True,
+    )
 
     class Meta:
         model = Cart
-        fields = ['products', 'total_price', 'created_at', 'updated_at']
+        fields = ['products', 'total_price']
+
+    def to_representation(self, instance):
+        """Если корзина пустая, то не выводим ее содержимое."""
+        data = super().to_representation(instance)
+
+        if not data['products']:
+            data.pop('products')
+            data.pop('total_price')
+
+        return data
 
 
 class ShortUserSerializer(serializers.ModelSerializer):
     """
     Краткое отображение пользователя.
 
-    Включает публиный id и email.
+    Включает публичный id и email.
     """
 
     class Meta:
@@ -146,7 +161,7 @@ class OrderItemSerializer(ItemTotalSerializerMixin):
 
     class Meta:
         model = OrderItem
-        fields = ['item_public_id', 'item_name', 'item_quantity', 'item_total']
+        fields = ['public_id', 'name', 'item_quantity', 'item_total']
 
 
 class CreateOrderSerializer(serializers.ModelSerializer):
@@ -155,6 +170,12 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
     Для создания необходимо указать адрес.
     """
+    address = serializers.CharField(
+        min_length=OrderConstants.ADDRESS_MIN_LENGTH,
+        max_length=OrderConstants.ADDRESS_MAX_LENGTH,
+        allow_blank=False,
+    )
+
     class Meta:
         model = Order
         fields = ['address']
@@ -162,13 +183,18 @@ class CreateOrderSerializer(serializers.ModelSerializer):
 
 class OrderSerializer(TotalPriceSerializerMixin):
     """
-    Отображение и изменение заказов.
+    Отображение и изменение заказа.
 
-    Включает публичный id, кратко пользователя, общую стоимость,
-    адрес, статус, даты создания и обновления, продукты.
+    Включает публичный id, краткие данные пользователя,
+    общую стоимость, адрес, статус, даты создания и обновления,
+    а также позиции заказа.
     """
     user = ShortUserSerializer()
-    products = OrderItemSerializer(many=True, source='items')
+    products = OrderItemSerializer(
+        many=True,
+        source='items',
+        read_only=True,
+    )
     status = serializers.ChoiceField(
         choices=Status.choices,
         error_messages={
@@ -207,28 +233,21 @@ class ProfileSerializer(serializers.ModelSerializer):
     """
     Отображение и редактирование своего профиля.
 
-    Включает публиный id, email, имя,
-    баланс, корзину и заказы пользователя.
+    Включает публичный id, email, имя и баланс.
 
     Обновить можно только имя.
     """
-    # cart = CartSerializer()
-    # orders = OrderListCreateSerializer(mane=True)
 
     class Meta(ShortUserSerializer.Meta):
-        fields = [
-            'public_id', 'email', 'first_name',
-            'balance',
-            # 'cart', 'orders'
-        ]
-        read_only_fields = ['balance', 'cart', 'orders', 'email']
+        fields = ['public_id', 'email', 'first_name', 'balance']
+        read_only_fields = ['balance', 'email']
 
 
 class BalanceSerializer(serializers.Serializer):
     """
     Редактирование своего баланса.
 
-    Включает добавленную сумму, номер карты 
+    Включает добавленную сумму, номер карты
     пользователя и ее CVC-код.
     """
     add_money = serializers.DecimalField(
@@ -254,16 +273,16 @@ class AdminListUserSerializer(serializers.ModelSerializer):
     """
     Отображение пользователей для админа.
 
-    Включает публиный id, email, имя,
+    Включает публичный id, email, имя,
     количество заказов, сумму заказов.
     """
-    # total_orders = ...  # read_only
-    # total_purchases = ...  # read_only
+    total_orders = serializers.ReadOnlyField()
+    total_purchases = serializers.ReadOnlyField()
 
     class Meta(ShortUserSerializer.Meta):
         fields = [
             'public_id', 'email', 'first_name',
-            # 'total_orders', 'total_purchases'
+            'is_active', 'total_orders', 'total_purchases',
         ]
 
 
@@ -271,27 +290,24 @@ class AdminUserSerializer(serializers.ModelSerializer):
     """
     Подробное отображение, обновления пользователя для админа.
 
-    Включает публиный id, email, имя, баланс,
+    Включает публичный id, email, имя, баланс,
     количество заказов, сумму заказов, заказы.
     """
-    # total_orders = ...  # read_only
-    # total_purchases = ...  # read_only
-    # orders = OrderListCreateSerializer(mane=True)
+    total_orders = serializers.ReadOnlyField()
+    total_purchases = serializers.ReadOnlyField()
+    orders = OrderSerializer(many=True, read_only=True)
 
     class Meta(ShortUserSerializer.Meta):
         fields = [
             'public_id', 'email', 'first_name', 'balance',
-            # 'total_orders', 'total_purchases', 'orders',
+            'total_orders', 'total_purchases', 'is_active', 'orders',
         ]
-        read_only_fields = [
-            'email', 'first_name', 'balance',
-            # 'orders'
-        ]
+        read_only_fields = ['email', 'first_name', 'balance']
 
 
 class AuthSerializer(serializers.ModelSerializer):
     """
-    Регистрация и аутентификаця пользователя.
+    Регистрация и аутентификация пользователя.
 
     Необходимо указать email и пароль.
     """
@@ -307,13 +323,13 @@ class AuthSerializer(serializers.ModelSerializer):
 
 
 class SendCodeSerializer(serializers.Serializer):
-    """Повторая отправка кода для подтверждения email."""
+    """Повторная отправка кода для подтверждения email."""
     email = serializers.EmailField()
 
 
 class VerifyEmailSerializer(serializers.Serializer):
     """
-    Потверждение указанной пользователем почты.
+    Подтверждение указанной пользователем почты.
 
     Необходимо указать email и код подтверждения.
     """

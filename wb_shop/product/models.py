@@ -11,7 +11,6 @@ from product.constants import (
     Status,
 )
 
-
 User = get_user_model()
 
 
@@ -42,7 +41,7 @@ class Product(PublicIdMixin, CreatedUpdatedMixin):
     )
     warehouse_quantity = models.PositiveIntegerField(
         'Количество',
-        validators=[MinValueValidator(ProductConstants.QUANTITY_MIN_VALUE)],
+        validators=[MinValueValidator(ProductConstants.NOT_IN_WAREHOUSE)],
     )
     is_deleted = models.BooleanField('Удален ли', default=False)
     deleted_at = models.DateTimeField(
@@ -192,12 +191,12 @@ class OrderItem(models.Model):
         related_name='order_items',
         verbose_name='Товар',
     )
-    item_public_id = models.CharField(
+    public_id = models.CharField(
         'Public ID позиции',
         validators=[RegexValidator(PublicIdConstants.PUBLIC_ID_REGEX)],
         editable=False,
     )
-    item_name = models.CharField(
+    name = models.CharField(
         'Наименование в заказе',
         max_length=ProductConstants.NAME_MAX_LENGTH,
         editable=False,

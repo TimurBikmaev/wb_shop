@@ -1,0 +1,6 @@
+[tool.ruff.lint]
+ignore = ["RUF012"]
+select = ["F", "I"]  # Правила Flake8 (F) и сортировка импортов isort (I).
+
+[tool.ruff.lint.isort]
+combine-as-imports = true  # Группировать импорты "from ... import ..." вместе

@@ -2,7 +2,7 @@ from django.contrib.auth.models import AbstractUser, BaseUserManager
 from django.core.validators import (
     MinLengthValidator,
     MinValueValidator,
-    RegexValidator
+    RegexValidator,
 )
 from django.db import models
 

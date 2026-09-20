@@ -22,6 +22,10 @@ class PublicIdConstants:
     PUBLIC_ID_REGEX = rf'[a-zA-Z0-9]{{{MAX_LENGTH}}}'
 
 
+class SettingsConstants:
+    PAGINATION_PAGE_NUMBER = 5
+
+
 class TokenConstants:
-    EXPIRE_ACCESS_MINUTS = 30
+    EXPIRE_ACCESS_MINUTS = 5
     EXPIRE_REFRESH_DAYS = 7

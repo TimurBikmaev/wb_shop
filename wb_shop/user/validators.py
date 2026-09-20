@@ -1,9 +1,13 @@
-from django.shortcuts import get_object_or_404
+import logging
+
 from rest_framework.exceptions import ValidationError
 
 from api.constants import MsgConstants as MSG
-from product.models import Product
+from product.constants import Status
+from product.models import Order
 from user.models import VarificationCode
+
+logger = logging.getLogger(__name__)
 
 
 class AuthValidator:
@@ -34,3 +38,29 @@ class AuthValidator:
             raise ValidationError('Введен неверный код.')
 
         verification_code.delete()
+
+
+class ProfileValidator:
+    """Валидаторы для профиля пользователя."""
+
+    @staticmethod
+    def can_user_delete_himself(user) -> None:
+        """
+        Администратору запрещено удалять себя.
+
+        Нельзя удалить свой профиль при наличии активных заказов.
+        """
+        if user.is_superuser:
+            logger.warning(
+                'Администратор с id %s попытался '
+                'изменить свой объект пользователя',
+                user.id,
+            )
+            raise ValidationError(
+                'Администратор не может удалить свой профиль.'
+            )
+
+        elif Order.objects.filter(status=Status.PENDING, user=user).exists():
+            raise ValidationError(
+                'Нельзя удалить профиль, пока существуют активные заказы.'
+            )

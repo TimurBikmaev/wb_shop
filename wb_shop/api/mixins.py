@@ -33,6 +33,10 @@ class TotalPriceSerializerMixin(serializers.ModelSerializer):
         return CartOrderService.sum_items_total_price(obj.items.all())
 
 
-class LookupMixin:
-    """Поиск объектов по их публичному id."""
+class HttpLookupMixin:
+    """
+    Поиск объектов по их публичному id.
+    Доступ ко всем HTTP-методам кроме PUT.
+    """
     lookup_field = 'public_id'
+    http_method_names = ['get', 'post', 'patch', 'delete']

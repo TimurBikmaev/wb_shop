@@ -1,5 +1,5 @@
 class MsgConstants:
-    EMAIL_ALREADY_CONFIRMED = 'Почта \'{user.email}\' уже подтверждена'
+    EMAIL_ALREADY_CONFIRMED = 'Почта \'{email}\' уже подтверждена'
     EMAIL_SEND_CODE = (
         'Код подтверждения отправлен на \'{email}\'. '
         'Чтобы продолжить регистрацию, отправьте код '

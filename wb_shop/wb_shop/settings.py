@@ -1,11 +1,10 @@
-from datetime import timedelta
 import os
+from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
 
-from core.constants import LoggingConstants, TokenConstants
-
+from core.constants import LoggingConstants, SettingsConstants, TokenConstants
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / '.env')
@@ -14,7 +13,6 @@ ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 DEBUG = os.getenv('DEBUG', 'false').lower() in ('true', '1', 't')
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
 CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
-CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
 
 LOG_DIR = BASE_DIR / 'logs'
 LOG_DIR.mkdir(exist_ok=True)
@@ -97,8 +95,12 @@ WSGI_APPLICATION = 'wb_shop.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB'),
+        'USER': os.getenv('POSTGRES_USER'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD'),
+        'HOST': os.getenv('POSTGRES_HOST'),
+        'PORT': os.getenv('POSTGRES_PORT'),
     }
 }
 
@@ -127,7 +129,8 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
@@ -141,9 +144,12 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ],
     'DEFAULT_FILTER_BACKENDS': [
-        'django_filters.rest_framework.DjangoFilterBackend',
         'rest_framework.filters.OrderingFilter',
     ],
+    'DEFAULT_PAGINATION_CLASS': (
+        'rest_framework.pagination.PageNumberPagination'
+    ),
+    'PAGE_SIZE': SettingsConstants.PAGINATION_PAGE_NUMBER,
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
@@ -152,8 +158,7 @@ DEFAULT_FROM_EMAIL = 'noreply@wbshop.com'
 
 SIMPLE_JWT = {
     'ACCESS_TOKEN_LIFETIME': timedelta(
-        # minutes=TokenConstants.EXPIRE_ACCESS_MINUTS,
-        days=5
+        minutes=TokenConstants.EXPIRE_ACCESS_MINUTS,
     ),
     'REFRESH_TOKEN_LIFETIME': timedelta(
         days=TokenConstants.EXPIRE_REFRESH_DAYS,
@@ -163,4 +168,54 @@ SIMPLE_JWT = {
     'BLACKLIST_AFTER_ROTATION': True,
 
     'AUTH_HEADER_TYPES': ('Bearer',),
+}
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'WB Shop',
+    'DESCRIPTION': (
+        'Интернет-магазин WB Shop. '
+        'Позволяет пользователям просматривать товары, управлять корзиной '
+        'и оформлять заказы. Администратору доступны управление товарами, '
+        'пользователями и заказами.\n\n'
+
+        'Проект представляет собой MVP бэкенда с REST API.\n\n'
+
+        'Полезные материалы:\n'
+        '- [GitHub репозиторий]('
+        'https://github.com/TimurBikmaev/wb_shop)\n'
+
+        '- [README.md]('
+        'https://github.com/TimurBikmaev/wb-shop/'
+        'blob/main/README.md)\n\n'
+
+        'Связь с разработчиком:\n'
+        '- [Telegram](https://t.me/w_NeVeR_w)\n'
+        '- Почта: bikma2004@gmail.com\n'
+        '- [Портфолио](https://github.com/TimurBikmaev)\n'
+    ),
+    'TAGS': [
+        {
+            'name': 'Аутентификация',
+            'description': 'Регистрация и подтверждение пользователя',
+        },
+        {
+            'name': 'Пользователи',
+            'description': 'Профиль пользователя и управление балансом',
+        },
+        {
+            'name': 'Товары',
+            'description': 'Просмотр и управление товарами магазина',
+        },
+        {
+            'name': 'Корзина',
+            'description': 'Просмотр и управление содержимым корзины',
+        },
+        {
+            'name': 'Заказы',
+            'description': 'Просмотр и управление заказами',
+        },
+    ],
+    'COMPONENT_SPLIT_REQUEST': True,
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
 }
