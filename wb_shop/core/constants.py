@@ -2,6 +2,8 @@ from decimal import Decimal
 
 
 class MoneyConstants:
+    CARD_CVC_LENGTH = 3
+    CARD_NUMBER_TEST_LENGTH = 5
     DECIMAL_PLACES = 2
     MAX_DIGITS = 8
     NO_MONEY = Decimal('0.00')
@@ -17,7 +19,7 @@ class LoggingConstants:
 
 class PublicIdConstants:
     MAX_LENGTH = 8
-    URL_REGEX = rf'[a-zA-Z0-9]{{{MAX_LENGTH}}}'
+    PUBLIC_ID_REGEX = rf'[a-zA-Z0-9]{{{MAX_LENGTH}}}'
 
 
 class TokenConstants:

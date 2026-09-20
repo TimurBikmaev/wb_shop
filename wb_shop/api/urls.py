@@ -1,4 +1,4 @@
-from django.urls import path, include
+from django.urls import include, path, re_path
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from rest_framework.routers import DefaultRouter
 from rest_framework_simplejwt.views import (
@@ -14,25 +14,27 @@ router_v1 = DefaultRouter()
 router_v1.register('auth', views.AuthViewSet, basename='auth')
 router_v1.register('users', views.UserViewSet, basename='users')
 router_v1.register('products', views.ProductViewSet, basename='products')
-router_v1.register('cart', views.CartViewSet, basename='cart')
-# router_v1.register(
-#     rf'posts/(?P<post_id>{PublicIdConstants.URL_REGEX})/comments',
-#     views.CommentViewSet,
-#     basename='comments'
-# )
-# router_v1.register('reports', views.ReportViewSet, basename='reports')
-# router_v1.register('videos', views.VideoViewSet, basename='videos')
-
+router_v1.register('orders', views.OrderViewSet, basename='orders')
 
 urlpatterns = [
-    path('v1/auth/token/', TokenObtainPairView.as_view()),
-    path('v1/auth/token/refresh/', TokenRefreshView.as_view()),
-    path('v1/', include(router_v1.urls)),
+    re_path(
+        rf'cart/item/(?P<product_public_id>{PublicIdConstants.PUBLIC_ID_REGEX})/',
+        views.CartItemView.as_view(),
+        name='cart_item',
+    ),
+    path('cart/', views.CartView.as_view(), name='cart'),
+    path('auth/token/', TokenObtainPairView.as_view(), name='token'),
+    path(
+        'auth/token/refresh/',
+        TokenRefreshView.as_view(),
+        name='token_refresh',
+    ),
+    path('', include(router_v1.urls)),
 
-    # path('v1/search/', views.SearchView.as_view(), name='search'),
-    # path('v1/schema/', SpectacularAPIView.as_view(), name='schema'),
+    # path('search/', views.SearchView.as_view(), name='search'),
+    # path('schema/', SpectacularAPIView.as_view(), name='schema'),
     # path(
-    #     'v1/docs/',
+    #     'docs/',
     #     SpectacularSwaggerView.as_view(url_name='schema'),
     #     name='swagger-ui',
     # )

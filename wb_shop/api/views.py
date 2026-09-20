@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model, logout
 from django.core.mail import send_mail
 from django.db.models import Count, Exists, OuterRef, Prefetch, Q, Value
 from django.db.models import DecimalField, ExpressionWrapper, F, Sum, Window
+from django.db.models.functions import Coalesce
 from django.shortcuts import get_object_or_404, redirect
 from django.utils import timezone
 from django_filters.rest_framework import DjangoFilterBackend
@@ -13,242 +14,28 @@ from rest_framework import mixins, permissions, status
 from rest_framework.decorators import action
 from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import OrderingFilter
+from rest_framework.generics import GenericAPIView
 from rest_framework.parsers import JSONParser, MultiPartParser
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import GenericViewSet, ModelViewSet, ViewSet
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from api import serializers
 from api.constants import MsgConstants as MSG
 from api.mixins import LookupMixin
-from api.validators import AuthValidator
 from core.constants import PublicIdConstants
-from product.constants import CartConstants
-from product.models import Cart, CartItem, Product, Order
+from product.constants import CartConstants, ProductConstants
+from product.models import Cart, CartItem, Product, Order, OrderItem
+from product.services import CartOrderService
 from user.models import VarificationCode
 from user.services import send_email_code
 from user.utils import generate_code
+from user.validators import AuthValidator
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
-
-
-class ProductViewSet(LookupMixin, ModelViewSet):
-    model = Product
-    # filter_backends = [DjangoFilterBackend, OrderingFilter]
-    # ordering_fields = ['likes_count', 'comments_count']
-    # ordering = ['-created_at']
-    # parser_classes = [MultiPartParser, JSONParser]
-
-    # def get_permissions(self):
-    #     user = self.request.user
-
-    #     if user.is_authenticated and not user.is_user:
-    #         if self.action == 'partial_update':
-    #             return [
-    #                 perm.IsAuthenticated(),
-    #                 IsModerOrStreamer(),
-    #                 NotBannedAllowAny(),
-    #             ]
-
-    #     if self.action in ('like', 'report'):
-    #         return [perm.IsAuthenticated(), NotBannedAllowAny()]
-
-    #     return [
-    #         NotBannedAllowAny(), perm.IsAuthenticatedOrReadOnly(), IsOwner()
-    #     ]
-
-    def get_queryset(self):
-        return Product.objects.filter(is_deleted=False)
-
-    def get_serializer_class(self):
-        """
-        Разделение для обычного пользователя и админаистратора.
-
-        Обычному пользователю доступно только чтение.
-        Администратору доступны все действия.
-        """
-        user = self.request.user
-
-        if user.is_authenticated and user.is_superuser:
-            if self.action == 'list':
-                return serializers.ProductAdminListSerializer
-            return serializers.ProductAdminSerializer
-
-        if self.action == 'list':
-            return serializers.ProductListSerializer
-        return serializers.ProductDetailSerializer
-
-    def destroy(self, request, *args, **kwargs):
-        """Реализация soft-delete."""
-        public_id = kwargs['public_id']
-        product = get_object_or_404(Product, public_id=public_id)
-
-        if product.is_deleted is True:
-            raise ValidationError(f'Товар {public_id} уже удален.')
-
-        product.is_deleted = True
-        product.deleted_at = timezone.now()
-        product.save(update_fields=["is_deleted", "deleted_at"])
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(methods=['post'], detail=True)
-    def restore(self, request, public_id=None):
-        """Восстановить удаленный товар."""
-        product = get_object_or_404(Product, public_id=public_id)
-
-        if product.is_deleted is False:
-            raise ValidationError(f'Товар {public_id} не удален.')
-
-        product.is_deleted = False
-        product.deleted_at = None
-        product.save(update_fields=["is_deleted", "deleted_at"])
-
-        serializer = self.get_serializer(product)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class CartViewSet(ModelViewSet):
-    model = Cart
-    serializer_class = serializers.CartSerializer
-    # filter_backends = [DjangoFilterBackend, OrderingFilter]
-    # ordering_fields = ['likes_count', 'comments_count']
-    # ordering = ['-created_at']
-    # parser_classes = [MultiPartParser, JSONParser]
-
-    def get_cart(self):
-        """Возвращает корзину пользователя."""
-        user = self.request.user
-        return get_object_or_404(Cart, user=user)
-
-    def get_queryset(self):
-        """Возвращает содержимое корзины пользователя."""
-        cart = self.get_cart()
-        queryset = cart.items.select_related('product').annotate(
-            item_total=ExpressionWrapper(
-                F('product__price') * F('item_quantity'),
-                output_field=DecimalField(
-                    max_digits=10,
-                    decimal_places=2,
-                ),
-            ),
-            cart_total=Window(
-                expression=Sum(
-                    F('product__price') * F('item_quantity'),
-                ),
-            ),
-        )
-
-        # total = cart.items.aggregate(
-        #     total=Sum(
-        #         ExpressionWrapper(
-        #             F('product__price') * F('item_quantity'),
-        #             output_field=DecimalField(
-        #                 max_digits=10,
-        #                 decimal_places=2,
-        #             ),
-        #         )
-        #     )
-        # )['total']
-
-        # return cart.items.select_related('product').annotate(
-        #     total=ExpressionWrapper(
-        #         F('product__price') * F('item_quantity'),
-        #         output_field=DecimalField(
-        #             max_digits=10,
-        #             decimal_places=2,
-        #         ),
-        #     ),
-        # )
-
-    def destroy(self, request, *args, **kwargs):
-        """Очистка корзины."""
-        self.get_cart().items.all().delete()
-
-        return Response(
-            {'detail': 'Корзина очищена.'},
-            status=status.HTTP_204_NO_CONTENT,
-        )
-
-    @action(
-        methods=['post', 'patch'],
-        detail=False,
-        url_path=rf'item/(?P<item_public_id>{PublicIdConstants.URL_REGEX})',
-    )
-    def item(self, request, item_public_id=None):
-        """
-        Добавляет одну позицию в корзину.
-
-        Если позиция уже добавелна, то
-        увеличивает количество позиции на один.
-        """
-        cart = self.get_cart()
-        product = get_object_or_404(Product, public_id=item_public_id)
-
-        if request.method == 'POST':
-            item, created = CartItem.objects.get_or_create(
-                cart=cart, product=product
-            )
-
-            if created is False:
-                item.item_quantity += CartConstants.ONE_ITEM
-                item.save(update_fields=['item_quantity'])
-
-            serializer = self.get_serializer(cart)
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        elif request.method == 'PATCH':
-            serializer = serializers.PatchCartItemSerializer(data=request.data)
-            serializer.is_valid(raise_exception=True)
-
-            item = get_object_or_404(CartItem, cart=cart, product=product)
-            item.item_quantity += serializer.validated_data['item_quantity']
-            item.save(update_fields=['item_quantity'])
-
-            serializer = self.get_serializer(cart)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-
-
-class UserViewSet(LookupMixin, ModelViewSet):
-    model = User
-    queryset = User.objects.all()
-    # filter_backends = [DjangoFilterBackend, OrderingFilter]
-    # ordering_fields = ['likes_count', 'comments_count']
-    # ordering = ['-created_at']
-    # parser_classes = [MultiPartParser, JSONParser]
-
-    # def get_permissions(self):
-    #     user = self.request.user
-
-    #     if user.is_authenticated and not user.is_user:
-    #         if self.action == 'partial_update':
-    #             return [
-    #                 perm.IsAuthenticated(),
-    #                 IsModerOrStreamer(),
-    #                 NotBannedAllowAny(),
-    #             ]
-
-    #     if self.action in ('like', 'report'):
-    #         return [perm.IsAuthenticated(), NotBannedAllowAny()]
-
-    #     return [
-    #         NotBannedAllowAny(), perm.IsAuthenticatedOrReadOnly(), IsOwner()
-    #     ]
-
-    def get_serializer_class(self):
-        """
-        Все пользователи могут смотреть свой профиль.
-        Только администратор может смотреть других пользователей.
-        """
-        user = self.request.user
-
-        if user.is_authenticated and user.is_superuser:
-            if self.action == 'list':
-                return serializers.AdminListUserSerializer
-            return serializers.AdminUserSerializer
-
-        return serializers.ProfileSerializer
 
 
 class AuthViewSet(ViewSet):
@@ -258,6 +45,8 @@ class AuthViewSet(ViewSet):
     Сначала пользователь регистрируется, вводя email и пароль.
     После он подтверждает свой email.
     """
+    permission_classes = [AllowAny]
+
     @action(detail=False, methods=['post'])
     def register(self, request):
         """
@@ -273,6 +62,7 @@ class AuthViewSet(ViewSet):
         email = serializer.validated_data['email']
         user = User.objects.create_user(
             email=email,
+            first_name=serializer.validated_data['first_name'],
             password=serializer.validated_data['password'],
             is_active=False,
         )
@@ -417,3 +207,304 @@ class AuthViewSet(ViewSet):
             {'detail': 'Пароль изменен.'},
             status=status.HTTP_200_OK,
         )
+
+
+class UserViewSet(LookupMixin, ModelViewSet):
+    model = User
+    queryset = User.objects.all()
+    # filter_backends = [DjangoFilterBackend, OrderingFilter]
+    # ordering_fields = ['likes_count', 'comments_count']
+    # ordering = ['-created_at']
+    # parser_classes = [MultiPartParser, JSONParser]
+
+    # def get_permissions(self):
+    #     user = self.request.user
+
+    #     if user.is_authenticated and not user.is_user:
+    #         if self.action == 'partial_update':
+    #             return [
+    #                 perm.IsAuthenticated(),
+    #                 IsModerOrStreamer(),
+    #                 NotBannedAllowAny(),
+    #             ]
+
+    #     if self.action in ('like', 'report'):
+    #         return [perm.IsAuthenticated(), NotBannedAllowAny()]
+
+    #     return [
+    #         NotBannedAllowAny(), perm.IsAuthenticatedOrReadOnly(), IsOwner()
+    #     ]
+
+    def get_serializer_class(self):
+        """
+        Все пользователи могут смотреть свой профиль.
+        Только администратор может смотреть других пользователей.
+        """
+        user = self.request.user
+
+        if user.is_authenticated and user.is_superuser:
+            if self.action == 'list':
+                return serializers.AdminListUserSerializer
+            return serializers.AdminUserSerializer
+
+        return serializers.ProfileSerializer
+
+    @action(detail=False, methods=['get', 'patch', 'delete'])
+    def me(self, request):
+        """Возвращает профиль пользователя."""
+        serializer = self.get_serializer(self.request.user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        detail=False,
+        methods=['post'],
+        url_path='me/balance',
+    )
+    def add_balance(self, request):
+        """Пополняет баланс пользователя."""
+        user = self.request.user
+
+        serializer = serializers.BalanceSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        add_money = serializer.validated_data['add_money']
+        user.balance += add_money
+        user.save(update_fields=['balance'])
+
+        serializer = self.get_serializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ProductViewSet(LookupMixin, ModelViewSet):
+    model = Product
+    # filter_backends = [DjangoFilterBackend, OrderingFilter]
+    # ordering_fields = ['likes_count', 'comments_count']
+    # ordering = ['-created_at']
+    # parser_classes = [MultiPartParser, JSONParser]
+
+    # def get_permissions(self):
+    #     user = self.request.user
+
+    #     if user.is_authenticated and not user.is_user:
+    #         if self.action == 'partial_update':
+    #             return [
+    #                 perm.IsAuthenticated(),
+    #                 IsModerOrStreamer(),
+    #                 NotBannedAllowAny(),
+    #             ]
+
+    #     if self.action in ('like', 'report'):
+    #         return [perm.IsAuthenticated(), NotBannedAllowAny()]
+
+    #     return [
+    #         NotBannedAllowAny(), perm.IsAuthenticatedOrReadOnly(), IsOwner()
+    #     ]
+
+    def get_queryset(self):
+        return Product.objects.filter(is_deleted=False)
+
+    def get_serializer_class(self):
+        """Обычному пользователю доступно только чтение."""
+        user = self.request.user
+
+        if user.is_authenticated and user.is_superuser:
+            if self.action == 'list':
+                return serializers.ProductAdminListSerializer
+            return serializers.ProductAdminSerializer
+
+        if self.action == 'list':
+            return serializers.ProductListSerializer
+        return serializers.ProductDetailSerializer
+
+    def destroy(self, request, *args, **kwargs):
+        """Реализация soft-delete."""
+        public_id = kwargs['public_id']
+        product = get_object_or_404(Product, public_id=public_id)
+
+        if product.is_deleted is True:
+            raise ValidationError(f'Товар {public_id} уже удален.')
+
+        product.is_deleted = True
+        product.deleted_at = timezone.now()
+        product.save(update_fields=["is_deleted", "deleted_at"])
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(methods=['post'], detail=True)
+    def restore(self, request, public_id=None):
+        """Восстановить удаленный товар."""
+        product = get_object_or_404(Product, public_id=public_id)
+
+        if product.is_deleted is False:
+            raise ValidationError(f'Товар {public_id} не удален.')
+
+        product.is_deleted = False
+        product.deleted_at = None
+        product.save(update_fields=["is_deleted", "deleted_at"])
+
+        serializer = self.get_serializer(product)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    @action(
+        methods=['post'],
+        detail=True,
+        url_path='add-to-cart',
+    )
+    def add_to_cart(self, request, public_id=None):
+        """
+        Добавляет товар в корзину.
+
+        Если товар закончился, или он удален
+        то выбрасывается ошибка.
+
+        Если товар уже добавлен, то
+        увеличивает его количество на один.
+        """
+        user = self.request.user
+        cart = get_object_or_404(Cart, user=user)
+        product = get_object_or_404(Product, public_id=public_id)
+
+        if product.warehouse_quantity == ProductConstants.NOT_IN_WAREHOUSE:
+            raise ValidationError(
+                f'Товар \'{product.public_id}\' закончился на складе. '
+                'Выберете другой товар.'
+            )
+        elif product.is_deleted is True:
+            raise ValidationError(
+                f'Товар \'{product.public_id}\' удален из магазина. '
+                'Выберете другой товар.'
+            )
+
+        item, created = CartItem.objects.get_or_create(
+            cart=cart, product=product
+        )
+
+        if created is False:
+            item.item_quantity += CartConstants.ONE_ITEM
+            item.save(update_fields=['item_quantity'])
+
+        serializer = serializers.CartSerializer(cart)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class CartView(GenericAPIView):
+    serializer_class = serializers.CartSerializer
+    # filter_backends = [DjangoFilterBackend, OrderingFilter]
+    # ordering_fields = ['likes_count', 'comments_count']
+    # ordering = ['-created_at']
+    # parser_classes = [MultiPartParser, JSONParser]
+
+    def get(self, request, *args, **kwargs):
+        """Возвращает содержимое корзины."""
+        cart = CartOrderService.get_cart(self.request.user)
+
+        serializer = self.get_serializer(cart)
+        return Response(serializer.data)
+
+    def delete(self, request):
+        """Очистка корзины."""
+        cart = get_object_or_404(Cart, user=request.user)
+        cart.items.all().delete()
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CartItemView(APIView):
+
+    def get_cart_item(self, product_public_id: str) -> tuple:
+        """Проверяет существование позиции и возвращает ее."""
+        cart = get_object_or_404(Cart, user=self.request.user)
+        product = get_object_or_404(Product, public_id=product_public_id)
+        item = get_object_or_404(CartItem, cart=cart, product=product)
+
+        return cart, product, item
+
+    def patch(self, request, product_public_id=None):
+        """Меняет количество позиций товара в корзине."""
+        cart, _, item = self.get_cart_item(product_public_id)
+
+        serializer = serializers.PatchCartItemSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        if item.item_quantity == serializer.validated_data['item_quantity']:
+            raise ValidationError(
+                f'В корзине уже находится {item.item_quantity} '
+                f'позиции товара \'{product_public_id}\''
+            )
+
+        item.item_quantity = serializer.validated_data['item_quantity']
+        item.save(update_fields=['item_quantity'])
+
+        serializer = serializers.CartSerializer(cart)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def delete(self, request, product_public_id=None):
+        """Удаляет все позиции товара из корзины."""
+        cart, _, item = self.get_cart_item(product_public_id)
+        item.delete()
+
+        serializer = serializers.CartSerializer(cart)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class OrderViewSet(
+    LookupMixin,
+    mixins.ListModelMixin,
+    mixins.RetrieveModelMixin,
+    mixins.CreateModelMixin,
+    mixins.UpdateModelMixin,
+    GenericViewSet,
+):
+    # filter_backends = [DjangoFilterBackend, OrderingFilter]
+    # ordering_fields = ['likes_count', 'comments_count']
+    # ordering = ['-created_at']
+    # parser_classes = [MultiPartParser, JSONParser]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        queryset = Order.objects.filter(user=user)
+
+        if user.is_authenticated and user.is_superuser:
+            if self.action == 'list':
+                return queryset.annotate(total_products=Count('items'))
+
+        return queryset.prefetch_related(Prefetch(
+            'items',
+            queryset=OrderItem.objects.select_related('product')
+        ))
+
+    def get_serializer_class(self):
+        """Обычному пользователю доступен просмотр только своих заказов."""
+        user = self.request.user
+
+        if user.is_authenticated and user.is_superuser:
+            if self.action == 'list':
+                return serializers.OrderAdminListSerializer
+
+        return serializers.OrderSerializer
+
+    def perform_create(self, serializer):
+        """Сохраняем владельца заказа."""
+        serializer.save(user=self.request.user)
+
+    def create(self, request, *args, **kwargs):
+        """
+        Для создания заказа необходимо указать адрес.
+
+        Перед созданием проверяется наличие позиций в корзине
+        и на складе, их статус удаления, а также баланс пользователя.
+
+        Считают общую сумму всех позиций и суммы каждой позиции.
+        Снимает деньги с баланса пользователя.
+        Удаляет товары из корзины, уменьшает остатки на складе.
+        """
+        serializer = serializers.CreateOrderSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
+        user = self.request.user
+        address = serializer.validated_data['address']
+        order = CartOrderService.create_order_from_cart(user, address)
+
+        serializer = self.get_serializer(order)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

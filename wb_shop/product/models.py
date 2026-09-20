@@ -1,8 +1,8 @@
 from django.contrib.auth import get_user_model
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, RegexValidator
 from django.db import models
 
-from core.constants import MoneyConstants
+from core.constants import MoneyConstants, PublicIdConstants
 from core.mixins import CreatedUpdatedMixin, PublicIdMixin
 from product.constants import (
     CartConstants,
@@ -64,7 +64,7 @@ class Product(PublicIdMixin, CreatedUpdatedMixin):
         return f'<Product(id={self.id}, price={self.price})>'
 
 
-class Cart(PublicIdMixin, CreatedUpdatedMixin):
+class Cart(CreatedUpdatedMixin):
     """
     Покупная корзина пользователя.
 
@@ -84,7 +84,7 @@ class Cart(PublicIdMixin, CreatedUpdatedMixin):
         db_table = 'cart'
 
     def __str__(self) -> str:
-        return f'Корзина {self.public_id} | {self.user.email}'
+        return f'Корзина {self.user.email}'
 
     def __repr__(self) -> str:
         return f'<Cart(id={self.id}, user={self.user_id})>'
@@ -174,9 +174,9 @@ class OrderItem(models.Model):
     """
     Состав заказа из покупной корзины.
 
-    Хранит информацию о заказе, продуктах,
-    их количестве, наименовании и цене в момент заказа.
-    При создании нового заказа делает снимок продуктов.
+    Хранит информацию о заказе, продуктах, их публичном id,
+    наименовании, количестве, цене и суммированной цене
+    за позиции одного товара в момент заказа.
 
     В заказе нельзя дублировать продукты.
     """
@@ -192,30 +192,35 @@ class OrderItem(models.Model):
         related_name='order_items',
         verbose_name='Товар',
     )
-    item_quantity = models.PositiveIntegerField(
-        'Количество позиций',
-        validators=[MinValueValidator(OrderConstants.PRODUCTS_IN_ORDER_MIN)]
+    item_public_id = models.CharField(
+        'Public ID позиции',
+        validators=[RegexValidator(PublicIdConstants.PUBLIC_ID_REGEX)],
+        editable=False,
     )
     item_name = models.CharField(
         'Наименование в заказе',
         max_length=ProductConstants.NAME_MAX_LENGTH,
+        editable=False,
+    )
+    item_quantity = models.PositiveIntegerField(
+        'Количество позиций',
+        validators=[MinValueValidator(OrderConstants.PRODUCTS_IN_ORDER_MIN)],
+        editable=False,
     )
     item_price = models.DecimalField(
         'Цена в заказе',
         max_digits=MoneyConstants.MAX_DIGITS,
         decimal_places=MoneyConstants.DECIMAL_PLACES,
         validators=[MinValueValidator(MoneyConstants.PRICE_MIN_VALUE)],
+        editable=False,
     )
-
-    def save(self, *args, **kwargs):
-        """
-        При создании позиции заказа сохраняет
-        наименование и цену продукта на момент оформления.
-        """
-        if self._state.adding and self.product:
-            self.item_name = self.product.name
-            self.item_price = self.product.price
-        super().save(*args, **kwargs)
+    item_total = models.DecimalField(
+        'Сумма позиции',
+        max_digits=MoneyConstants.MAX_DIGITS,
+        decimal_places=MoneyConstants.DECIMAL_PLACES,
+        validators=[MinValueValidator(MoneyConstants.PRICE_MIN_VALUE)],
+        editable=False,
+    )
 
     class Meta:
         db_table = 'order_item'

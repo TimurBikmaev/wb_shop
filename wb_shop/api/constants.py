@@ -9,6 +9,6 @@ class MsgConstants:
 
 class SerializerConstants:
     ORDER_COMMON_FIELDS = [
-        'public_id', 'total_price', 'address',
+        'public_id', 'user', 'total_price', 'address',
         'status', 'created_at', 'updated_at'
     ]

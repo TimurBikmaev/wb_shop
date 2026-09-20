@@ -1,5 +1,9 @@
 from django.contrib.auth.models import AbstractUser, BaseUserManager
-from django.core.validators import MinValueValidator, RegexValidator
+from django.core.validators import (
+    MinLengthValidator,
+    MinValueValidator,
+    RegexValidator
+)
 from django.db import models
 
 from core.constants import MoneyConstants
@@ -60,6 +64,9 @@ class User(PublicIdMixin, CreatedUpdatedMixin, AbstractUser):
     first_name = models.CharField(
         'Имя',
         max_length=UserConstants.NAME_MAX_LENGTH,
+        validators=[
+            MinLengthValidator(UserConstants.NAME_MIN_LENGTH),
+        ],
     )
     balance = models.DecimalField(
         'Баланс',

@@ -6,3 +6,4 @@ class AuthConstants:
 
 class UserConstants:
     NAME_MAX_LENGTH = 50
+    NAME_MIN_LENGTH = 2

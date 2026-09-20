@@ -17,10 +17,11 @@ class ProductConstants:
     DESCRIPTION_MAX_LENGTH = 1000
     NAME_MAX_LENGTH = 100
     NAME_SHORT = 20
+    NOT_IN_WAREHOUSE = 0
     QUANTITY_MIN_VALUE = 1
 
 
 class Status(TextChoices):
-    cancelled = 'cancelled', 'Отменен'
+    CANCELLED = 'cancelled', 'Отменен'
     PENDING = 'pending', 'В ожидании'
     COMPLETED = 'completed', 'Завершен'

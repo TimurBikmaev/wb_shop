@@ -13,6 +13,7 @@ load_dotenv(BASE_DIR / '.env')
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', '').split(',')
 DEBUG = os.getenv('DEBUG', 'false').lower() in ('true', '1', 't')
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY')
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', '').split(',')
 CSRF_TRUSTED_ORIGINS = os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
 
 LOG_DIR = BASE_DIR / 'logs'
@@ -135,6 +136,9 @@ AUTH_USER_MODEL = 'user.User'
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
         'rest_framework_simplejwt.authentication.JWTAuthentication',
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated",
     ],
     'DEFAULT_FILTER_BACKENDS': [
         'django_filters.rest_framework.DjangoFilterBackend',
