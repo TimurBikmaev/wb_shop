@@ -209,7 +209,7 @@ cd wb_shop  # Перейдите в директорию проекта
 ### 2. Запуск Docker Compose (запустит Django-проект и PostgreSQL)
 
 ```bash
-docker compose up -d
+docker compose up --build -d
 ```
 
 ### 3. Применение миграций
