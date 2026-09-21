@@ -227,7 +227,7 @@ docker compose up --build -d
 
 Документация API разработана на основе **drf-spectacular (Swagger / OpenAPI)**. В ней можно ознакомиться с доступными эндпоинтами и протестировать запросы.
 
-Ссылка в проекте: https://github.com/TimurBikmaev/wb_shop/blob/main/docs/wb_shop.yaml.
+Ссылка в проекте: https://github.com/TimurBikmaev/wb_shop/blob/main/wb_shop/docs/wb_shop.yaml.
 
 Адрес при локальной разработке: http://localhost:8000/docs/.
 
