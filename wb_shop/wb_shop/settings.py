@@ -185,12 +185,12 @@ SPECTACULAR_SETTINGS = {
         'https://github.com/TimurBikmaev/wb_shop)\n'
 
         '- [README.md]('
-        'https://github.com/TimurBikmaev/wb-shop/'
+        'https://github.com/TimurBikmaev/wb_shop/'
         'blob/main/README.md)\n\n'
 
         '- [Источник документации Swagger]('
         'https://github.com/TimurBikmaev/wb_shop/'
-        'blob/main/docs/wb_shop.yaml)\n\n'
+        'blob/main/wb_shop/docs/wb_shop.yaml)\n\n'
 
         'Связь с разработчиком:\n'
         '- [Telegram](https://t.me/w_NeVeR_w)\n'
