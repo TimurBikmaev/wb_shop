@@ -169,6 +169,11 @@ API documentation: **drf-spectacular (Swagger / OpenAPI)**.
     ├── requirements.txt      # Зависимости проекта
     ├── user                  # Приложение пользователей
     │   ├── __init__.py
+    │   ├── management          # Пользовательские management-команды
+    │   │   ├── __init__.py
+    │   │   └── commands
+    │   │       ├── __init__.py
+    │   │       └── init_admin.py   # Инициализация администратора
     │   ├── admin.py          # Админка для пользователей
     │   ├── apps.py
     │   ├── constants.py      # Константы пользователей
@@ -212,39 +217,19 @@ cd wb_shop/wb_shop  # Перейдите в директорию проекта
 docker compose up --build -d
 ```
 
-### 3. Применение миграций
-
-```bash
-docker compose exec backend python manage.py migrate
-```
-
-### 4. Создание администратора
-
-```bash
-docker compose exec backend python manage.py createsuperuser
-```
+Для удобства инициализирует создание администратора:
+- Email: admin@example.com
+- Password: admin12345
 
 Админка доступна по адресу: http://localhost:8000/admin/
 
-### 5. Создание корзины покупок для администратора
-
-```bash
-docker compose exec backend python manage.py shell
-from django.contrib.auth import get_user_model
-from product.models import Cart
-User = get_user_model()
-user = User.objects.get(email="<admin_email>")
-Cart.objects.create(user=user)
-exit
-```
-
 ## Документация Swagger
 
-Документация API разработана на основе **drf-spectacular (Swagger / OpenAPI)**.
-Ссылка в проекте: https://github.com/TimurBikmaev/wb_shop/blob/main/docs/wb_shop.yaml.
-Также доступно по адресу при локальной разработке: http://localhost:8000/docs/.
+Документация API разработана на основе **drf-spectacular (Swagger / OpenAPI)**. В ней можно ознакомиться с доступными эндпоинтами и протестировать запросы.
 
-В документации можно ознакомиться с доступными эндпоинтами и протестировать запросы.
+Ссылка в проекте: https://github.com/TimurBikmaev/wb_shop/blob/main/docs/wb_shop.yaml.
+
+Адрес при локальной разработке: http://localhost:8000/docs/.
 
 ## Тестирование
 
