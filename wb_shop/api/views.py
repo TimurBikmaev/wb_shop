@@ -507,7 +507,7 @@ class UserViewSet(
         Все пользователи могут смотреть свой профиль.
         Только администратор может смотреть других пользователей.
         """
-        if self.action == 'me':
+        if self.action in ('me', 'add_balance'):
             return serializers.ProfileSerializer
 
         if self.action == 'list':
@@ -1226,9 +1226,13 @@ class OrderViewSet(
         param = self.request.query_params.get('status', Status.PENDING)
 
         if user.is_authenticated and user.is_superuser:
-            queryset = Order.objects.annotate(total_products=Count('items'))
+            queryset = Order.objects
         else:
             queryset = Order.objects.filter(user=user)
+
+        queryset = queryset.annotate(
+            total_products=Sum('items__item_quantity')
+        )
 
         if param in Status.values:
             queryset = queryset.filter(status=param)

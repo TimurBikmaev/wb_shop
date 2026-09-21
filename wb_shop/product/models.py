@@ -54,9 +54,10 @@ class Product(PublicIdMixin, CreatedUpdatedMixin):
         verbose_name = 'Товар'
         verbose_name_plural = 'Товары'
         db_table = 'product'
+        ordering = ['name']
 
     def __str__(self) -> str:
-        return f'{self.name[:ProductConstants.NAME_SHORT]} | {self.price}'
+        return f'Товар {self.public_id}'
 
     def __repr__(self) -> str:
         return f'<Product(id={self.id}, price={self.price})>'
@@ -140,7 +141,7 @@ class Order(PublicIdMixin, CreatedUpdatedMixin):
         verbose_name='Пользователь',
     )
     total_price = models.DecimalField(
-        'Сумма',
+        'Итоговая сумма',
         max_digits=MoneyConstants.MAX_DIGITS,
         decimal_places=MoneyConstants.DECIMAL_PLACES,
         validators=[MinValueValidator(MoneyConstants.PRICE_MIN_VALUE)],
@@ -162,7 +163,7 @@ class Order(PublicIdMixin, CreatedUpdatedMixin):
         ordering = ['-created_at']
 
     def __str__(self) -> str:
-        return f'Заказ {self.public_id} | {self.total_price}'
+        return f'Заказ {self.public_id}'
 
     def __repr__(self) -> str:
         return f'<Order(id={self.id}, user={self.user_id})>'
@@ -213,7 +214,7 @@ class OrderItem(models.Model):
         editable=False,
     )
     item_total = models.DecimalField(
-        'Сумма позиции',
+        'Сумма позиций',
         max_digits=MoneyConstants.MAX_DIGITS,
         decimal_places=MoneyConstants.DECIMAL_PLACES,
         validators=[MinValueValidator(MoneyConstants.PRICE_MIN_VALUE)],
@@ -228,3 +229,7 @@ class OrderItem(models.Model):
                 name='unique_order_product',
             ),
         ]
+        verbose_name_plural = 'Позиции заказа'
+
+    def __str__(self) -> str:
+        return f'Товар {self.public_id}'

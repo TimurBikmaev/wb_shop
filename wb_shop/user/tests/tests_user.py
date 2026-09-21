@@ -5,7 +5,6 @@ from rest_framework import status
 
 from user.tests.constants import TestUserConstants as TUserCon
 
-
 User = get_user_model()
 
 

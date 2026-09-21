@@ -9,7 +9,6 @@ from rest_framework import status
 from product.models import CartItem, Product
 from product.tests.constants import TestProductConstants as TProductCon
 
-
 User = get_user_model()
 
 

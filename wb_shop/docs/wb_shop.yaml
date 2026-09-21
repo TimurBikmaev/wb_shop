@@ -1,0 +1,1823 @@
+openapi: 3.0.3
+info:
+  title: WB Shop
+  version: 1.0.0
+  description: |
+    Интернет-магазин WB Shop. Позволяет пользователям просматривать товары, управлять корзиной и оформлять заказы. Администратору доступны управление товарами, пользователями и заказами.
+
+    Проект представляет собой MVP бэкенда с REST API.
+
+    Полезные материалы:
+    - [GitHub репозиторий](https://github.com/TimurBikmaev/wb_shop)
+    - [README.md](https://github.com/TimurBikmaev/wb-shop/blob/main/README.md)
+
+    - [Источник документации Swagger](https://github.com/TimurBikmaev/wb_shop/blob/main/docs/wb_shop.yaml)
+
+    Связь с разработчиком:
+    - [Telegram](https://t.me/w_NeVeR_w)
+    - Почта: bikma2004@gmail.com
+    - [Портфолио](https://github.com/TimurBikmaev)
+paths:
+  /api/v1/auth/change-email/:
+    patch:
+      operationId: auth_change_email_partial_update
+      description: Изменяет email пользователя после проверки текущей почты и пароля.
+        Новая почта не должна быть занята другим пользователем. После изменения пользователь
+        деактивируется и должен повторно подтвердить новый email.
+      summary: Изменить email
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedChangeEmailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedChangeEmailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedChangeEmailRequest'
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Email изменен. Пользователь деактивирован и должен подтвердить
+            новый email.
+        '400':
+          description: Неверный пароль, новая почта уже существует или переданы некорректные
+            данные.
+        '404':
+          description: Пользователь со старой почтой не найден.
+  /api/v1/auth/change-password/:
+    patch:
+      operationId: auth_change_password_partial_update
+      description: Изменяет пароль пользователя после проверки кода подтверждения
+        email. Новый пароль не должен совпадать с текущим.
+      summary: Изменить пароль
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedChangePasswordRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedChangePasswordRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedChangePasswordRequest'
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Пароль успешно изменен.
+        '400':
+          description: Новый пароль совпадает с текущим, код подтверждения некорректен
+            или переданы некорректные данные.
+        '404':
+          description: Пользователь с указанной почтой не найден.
+  /api/v1/auth/register/:
+    post:
+      operationId: auth_register_create
+      description: Создает неактивного пользователя по указанным email, имени и паролю.
+        После регистрации на указанную почту отправляется код подтверждения. Для завершения
+        регистрации необходимо подтвердить email через эндпоинт auth/verify-email.
+      summary: Регистрация пользователя
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/AuthRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          description: Пользователь создан. Код подтверждения отправлен на указанную
+            почту.
+        '400':
+          description: Ошибка валидации данных.
+  /api/v1/auth/send-code/:
+    post:
+      operationId: auth_send_code_create
+      description: Отправляет новый код подтверждения на почту зарегистрированного
+        пользователя.
+      summary: Отправить код подтверждения
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendCodeRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SendCodeRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SendCodeRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '201':
+          description: Код подтверждения отправлен на указанную почту.
+        '400':
+          description: Ошибка валидации данных.
+        '404':
+          description: Пользователь с указанной почтой не найден.
+  /api/v1/auth/token/:
+    post:
+      operationId: auth_token_create
+      description: Принимает почту и пароль пользователя. Возвращает пару JSON Web
+        Token (токен доступа и токен обновления). Подтверждает аутентификацию с использованием
+        этих данных.
+      summary: Получить токены доступа и обновления
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenObtainPairRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenObtainPair'
+          description: ''
+  /api/v1/auth/token/refresh/:
+    post:
+      operationId: auth_token_refresh_create
+      description: Принимает JSON Web Token (JWT) обновления и возвращает JWT доступа,
+        если токен обновления действителен.
+      summary: Получить токен обновления
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/TokenRefreshRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenRefresh'
+          description: ''
+  /api/v1/auth/verify-email/:
+    post:
+      operationId: auth_verify_email_create
+      description: Подтверждает email пользователя по коду. При успешной проверке
+        кода неактивный пользователь активируется. Также создается корзина покупок,
+        если она отсутствует.
+      summary: Подтвердить email
+      tags:
+      - Аутентификация
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/VerifyEmailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          description: Email подтвержден. Пользователь активирован и может получить
+            токен доступа.
+        '400':
+          description: Неверный код подтверждения или ошибка валидации.
+        '404':
+          description: Пользователь с указанной почтой не найден.
+  /api/v1/cart/:
+    get:
+      operationId: cart_retrieve
+      description: Возвращает содержимое корзины текущего авторизованного пользователя.
+      summary: Получить содержимое корзины
+      tags:
+      - Корзина
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+          description: ''
+        '404':
+          description: Корзина не найдена.
+    delete:
+      operationId: cart_destroy
+      description: Удаляет все товары из корзины текущего авторизованного пользователя.
+      summary: Очистить корзину
+      tags:
+      - Корзина
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '404':
+          description: Корзина не найдена.
+  /api/v1/cart/item/{product_public_id}/:
+    patch:
+      operationId: cart_item_partial_update
+      description: Изменяет количество указанного товара в корзине текущего пользователя.
+        Количество не может превышать доступное количество товара на складе.
+      summary: Изменить количество товара в корзине
+      parameters:
+      - in: path
+        name: product_public_id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9]{8}$
+        required: true
+      tags:
+      - Корзина
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedPatchCartItemRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedPatchCartItemRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedPatchCartItemRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+          description: ''
+        '400':
+          description: 'Ошибка валидации. Возможные причины: указанное количество
+            уже установлено в корзине; указанное количество превышает остаток товара
+            на складе.'
+        '404':
+          description: Товар или позиция товара в корзине не найдены.
+    delete:
+      operationId: cart_item_destroy
+      description: Удаляет все позиции указанного товара из корзины текущего пользователя
+        и возвращает обновленное содержимое корзины.
+      summary: Удалить товар из корзины
+      parameters:
+      - in: path
+        name: product_public_id
+        schema:
+          type: string
+          pattern: ^[a-zA-Z0-9]{8}$
+        required: true
+      tags:
+      - Корзина
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+          description: ''
+        '404':
+          description: Товар или позиция товара в корзине не найдены.
+  /api/v1/orders/:
+    get:
+      operationId: orders_list
+      description: Возвращает список заказов. Обычному пользователю доступны только
+        его заказы, администратору — все заказы. По умолчанию возвращаются заказы
+        со статусом pending, отсортированные от новых к старым. Доступна фильтрация
+        по статусу и сортировка по дате создания и общей стоимости заказа.
+      summary: Получить список заказов
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -created_at
+          - -total_price
+          - created_at
+          - total_price
+        description: Сортировка заказов
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      - in: query
+        name: status
+        schema:
+          type: string
+          enum:
+          - all
+          - cancelled
+          - completed
+          - pending
+        description: Фильтрация заказов по статусу. По умолчанию 'pending'. Значение
+          'all' отключает фильтрацию по статусу.
+      tags:
+      - Заказы
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedOrderAdminListList'
+          description: ''
+    post:
+      operationId: orders_create
+      description: Создает заказ на основе содержимого корзины текущего пользователя.
+        Перед созданием проверяется, что корзина не пуста, товары не удалены и доступны
+        в необходимом количестве на складе, а также что на балансе пользователя достаточно
+        средств. После создания заказа товары удаляются из корзины, остатки на складе
+        уменьшаются, а стоимость заказа списывается с баланса пользователя.
+      summary: Создать заказ
+      tags:
+      - Заказы
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CreateOrderRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '400':
+          description: 'Ошибка создания заказа. Возможные причины: некорректный или
+            пустой адрес; корзина пуста; товар удален из магазина; на складе недостаточно
+            товара; на балансе недостаточно средств.'
+  /api/v1/orders/{public_id}/:
+    get:
+      operationId: orders_retrieve
+      description: Возвращает подробную информацию о заказе. Обычный пользователь
+        может получить только свой заказ. Администратор может получить любой заказ.
+      summary: Получить заказ
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Заказы
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '404':
+          description: Заказ не найден.
+    patch:
+      operationId: orders_partial_update
+      description: Изменяет данные заказа. Доступно только администратору. Для изменения
+        статуса необходимо передать новое значение, отличное от текущего.
+      summary: Изменить статус заказа
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Заказы
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedOrderRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+          description: ''
+        '400':
+          description: Передан недопустимый статус или указанный статус уже установлен
+            у заказа.
+        '403':
+          description: Изменение заказа доступно только администратору.
+        '404':
+          description: Заказ не найден.
+  /api/v1/products/:
+    get:
+      operationId: products_list
+      description: 'Возвращает список товаров. По умолчанию возвращаются только неудаленные
+        товары, отсортированные по цене от меньшей к большей. Доступна сортировка
+        по цене и количеству товара на складе. Администратор дополнительно может фильтровать
+        товары по статусу удаления: получить только удаленные товары или все товары.'
+      summary: Получить список товаров
+      parameters:
+      - in: query
+        name: is_deleted
+        schema:
+          type: string
+          enum:
+          - all
+          - 'true'
+        description: Фильтрация по статусу удаления. Значение 'true' возвращает только
+          удаленные товары, 'all' — все товары. Без параметра возвращаются только
+          неудаленные товары. Доступно только администратору.
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -price
+          - -warehouse_quantity
+          - price
+          - warehouse_quantity
+        description: Сортировка товаров
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Товары
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedProductListList'
+          description: ''
+        '403':
+          description: Доступно только администратору.
+    post:
+      operationId: products_create
+      description: Создает новый товар. Доступно только администратору.
+      summary: Создать товар
+      tags:
+      - Товары
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductAdminRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductAdminRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductAdminRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAdmin'
+          description: ''
+        '400':
+          description: Ошибка валидации данных.
+        '403':
+          description: Доступно только администратору.
+  /api/v1/products/{public_id}/:
+    get:
+      operationId: products_retrieve
+      description: Возвращает подробную информацию о товаре.
+      summary: Получить товар
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Товары
+      security:
+      - jwtAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductDetail'
+          description: ''
+        '404':
+          description: Товар не найден.
+    patch:
+      operationId: products_partial_update
+      description: Изменяет данные товара. Доступно только администратору.
+      summary: Изменить товар
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Товары
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProductAdminRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProductAdminRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProductAdminRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAdmin'
+          description: ''
+        '400':
+          description: Ошибка валидации данных.
+        '403':
+          description: Доступно только администратору.
+        '404':
+          description: Товар не найден.
+    delete:
+      operationId: products_destroy
+      description: Выполняет soft-delete товара. Товар не удаляется из базы данных,
+        а помечается как удаленный. Доступно только администратору.
+      summary: Удалить товар
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Товары
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          description: Товар уже удален.
+        '403':
+          description: Доступно только администратору.
+        '404':
+          description: Товар не найден.
+  /api/v1/products/{public_id}/add-to-cart/:
+    post:
+      operationId: products_add_to_cart_create
+      description: Добавляет товар в корзину текущего пользователя. Если товар уже
+        находится в корзине, его количество увеличивается на один. Нельзя добавить
+        удаленный товар или товар, отсутствующий на складе.
+      summary: Добавить товар в корзину
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Товары
+      security:
+      - jwtAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Cart'
+          description: ''
+        '400':
+          description: Товар закончился на складе или был удален из магазина.
+        '401':
+          description: Пользователь не авторизован.
+        '404':
+          description: Корзина или товар не найдены.
+  /api/v1/products/{public_id}/restore/:
+    post:
+      operationId: products_restore_create
+      description: Восстанавливает ранее удаленный товар. После восстановления товар
+        снова становится доступен в магазине. Доступно только администратору.
+      summary: Восстановить товар
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Товары
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProductDetailRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/ProductDetailRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/ProductDetailRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProductAdmin'
+          description: ''
+        '400':
+          description: Товар не удален.
+        '403':
+          description: Доступно только администратору.
+        '404':
+          description: Товар не найден.
+  /api/v1/users/:
+    get:
+      operationId: users_list
+      description: Возвращает список пользователей. Доступно только администратору.
+        Для каждого пользователя отображается общее количество заказов и общая сумма
+        покупок. По умолчанию пользователи отсортированы по общей сумме покупок от
+        большей к меньшей. Доступна сортировка по общему количеству заказов и общей
+        сумме покупок.
+      summary: Получить список пользователей
+      parameters:
+      - in: query
+        name: ordering
+        schema:
+          type: string
+          enum:
+          - -total_orders
+          - -total_purchases
+          - total_orders
+          - total_purchases
+        description: Сортировка пользователей
+      - name: page
+        required: false
+        in: query
+        description: A page number within the paginated result set.
+        schema:
+          type: integer
+      tags:
+      - Пользователи
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaginatedAdminListUserList'
+          description: ''
+        '403':
+          description: Доступно только администратору.
+  /api/v1/users/{public_id}/:
+    get:
+      operationId: users_retrieve
+      description: Возвращает подробную информацию о пользователе, включая общее количество
+        заказов, общую сумму покупок и список заказов с товарами. Доступно только
+        администратору.
+      summary: Получить пользователя
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Пользователи
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+        '403':
+          description: Доступно только администратору.
+        '404':
+          description: Пользователь не найден.
+    patch:
+      operationId: users_partial_update
+      description: Изменяет данные пользователя. Администратор может изменять других
+        пользователей, но не может изменять состояние своего профиля через данный
+        эндпоинт. Для изменения собственного профиля необходимо использовать users/me.
+      summary: Изменить пользователя
+      parameters:
+      - in: path
+        name: public_id
+        schema:
+          type: string
+        required: true
+      tags:
+      - Пользователи
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminUserRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminUserRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedAdminUserRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUser'
+          description: ''
+        '400':
+          description: Ошибка валидации данных.
+        '403':
+          description: Доступно только администратору.
+        '404':
+          description: Пользователь не найден.
+  /api/v1/users/me/:
+    get:
+      operationId: users_me_retrieve
+      description: Возвращает профиль текущего авторизованного пользователя, включая
+        информацию о количестве заказов и общей сумме покупок.
+      summary: Получить свой профиль
+      tags:
+      - Пользователи
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+        '401':
+          description: Пользователь не авторизован.
+    patch:
+      operationId: users_me_partial_update
+      description: Изменяет имя текущего пользователя. Для изменения email и пароля
+        используются отдельные эндпоинты.
+      summary: Изменить свой профиль
+      tags:
+      - Пользователи
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedProfileRequest'
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+        '400':
+          description: Ошибка валидации данных или указанное имя уже установлено.
+        '401':
+          description: Пользователь не авторизован.
+    delete:
+      operationId: users_me_destroy
+      description: Удаляет профиль текущего пользователя. Удаление невозможно, если
+        у пользователя есть заказы в статусе ожидания.
+      summary: Удалить свой профиль
+      tags:
+      - Пользователи
+      security:
+      - jwtAuth: []
+      responses:
+        '204':
+          description: No response body
+        '400':
+          description: Удаление невозможно из-за наличия ожидающих заказов.
+        '401':
+          description: Пользователь не авторизован.
+  /api/v1/users/me/balance/:
+    post:
+      operationId: users_me_balance_create
+      description: Пополняет баланс текущего пользователя на указанную сумму и возвращает
+        обновленный профиль.
+      summary: Пополнить баланс
+      tags:
+      - Пользователи
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BalanceRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/BalanceRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/BalanceRequest'
+        required: true
+      security:
+      - jwtAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile'
+          description: ''
+        '400':
+          description: Ошибка валидации суммы пополнения.
+        '401':
+          description: Пользователь не авторизован.
+components:
+  schemas:
+    AdminListUser:
+      type: object
+      description: |-
+        Отображение пользователей для админа.
+
+        Включает публичный id, email, имя,
+        количество заказов, сумму заказов.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 50
+          minLength: 2
+        is_active:
+          type: boolean
+          default: true
+          title: Активный
+          description: Отметьте, если пользователь должен считаться активным. Уберите
+            эту отметку вместо удаления учётной записи.
+        total_orders:
+          type: integer
+        total_purchases:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+      required:
+      - email
+      - first_name
+      - public_id
+      - total_orders
+      - total_purchases
+    AdminUser:
+      type: object
+      description: |-
+        Подробное отображение, обновления пользователя для админа.
+
+        Включает публичный id, email, имя, баланс,
+        количество заказов, сумму заказов, заказы.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        first_name:
+          type: string
+          readOnly: true
+          title: Имя
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+          title: Баланс
+        total_orders:
+          type: integer
+        total_purchases:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        is_active:
+          type: boolean
+          default: true
+          title: Активный
+          description: Отметьте, если пользователь должен считаться активным. Уберите
+            эту отметку вместо удаления учётной записи.
+        orders:
+          type: array
+          items:
+            $ref: '#/components/schemas/Order'
+          readOnly: true
+      required:
+      - balance
+      - email
+      - first_name
+      - orders
+      - public_id
+      - total_orders
+      - total_purchases
+    AuthRequest:
+      type: object
+      description: |-
+        Регистрация и аутентификация пользователя.
+
+        Необходимо указать email и пароль.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+        first_name:
+          type: string
+          minLength: 2
+          maxLength: 50
+        password:
+          type: string
+          minLength: 1
+      required:
+      - email
+      - first_name
+      - password
+    BalanceRequest:
+      type: object
+      description: |-
+        Редактирование своего баланса.
+
+        Включает добавленную сумму, номер карты
+        пользователя и ее CVC-код.
+      properties:
+        add_money:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        card_number:
+          type: string
+          minLength: 1
+          pattern: ^\d{5}$
+        cvc:
+          type: string
+          minLength: 1
+          pattern: ^\d{3}$
+      required:
+      - add_money
+      - card_number
+      - cvc
+    Cart:
+      type: object
+      description: |-
+        Отображение корзины покупок.
+
+        Включает добавленные товары и общую стоимость.
+      properties:
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/CartItem'
+          readOnly: true
+        total_price:
+          type: number
+          format: double
+          description: Рассчитывает сумму всех позиций.
+          readOnly: true
+      required:
+      - products
+      - total_price
+    CartItem:
+      type: object
+      description: |-
+        Отображение позиций в корзине покупок.
+
+        Включает публичный id, наименование, количество
+        в корзине и суммированную цену каждой позиции.
+      properties:
+        public_id:
+          type: string
+        name:
+          type: string
+        item_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          default: 1
+          title: Количество позиций
+        item_total:
+          type: number
+          format: double
+          description: Рассчитывает сумму каждой позиции.
+          readOnly: true
+      required:
+      - item_total
+      - name
+      - public_id
+    CreateOrderRequest:
+      type: object
+      description: |-
+        Создание заказа.
+
+        Для создания необходимо указать адрес.
+      properties:
+        address:
+          type: string
+          minLength: 3
+          maxLength: 255
+      required:
+      - address
+    Order:
+      type: object
+      description: |-
+        Отображение и изменение заказа.
+
+        Включает публичный id, краткие данные пользователя,
+        общую стоимость, адрес, статус, даты создания и обновления,
+        а также позиции заказа.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+        user:
+          $ref: '#/components/schemas/ShortUser'
+        total_price:
+          type: number
+          format: double
+          description: Рассчитывает сумму всех позиций.
+          readOnly: true
+        address:
+          type: string
+          title: Адрес
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Дата создания
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Дата обновления
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderItem'
+          readOnly: true
+      required:
+      - address
+      - created_at
+      - products
+      - public_id
+      - status
+      - total_price
+      - updated_at
+      - user
+    OrderAdminList:
+      type: object
+      description: |-
+        Отображение списка заказов для админа.
+
+        Включает публичный id, кратко пользователя, общую стоимость,
+        адрес, статус, даты создания и обновления, количество продуктов.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+        user:
+          $ref: '#/components/schemas/ShortUser'
+        total_price:
+          type: number
+          format: double
+          description: Рассчитывает сумму всех позиций.
+          readOnly: true
+        address:
+          type: string
+          title: Адрес
+          maxLength: 255
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          default: pending
+          title: Статус
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Дата создания
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Дата обновления
+        total_products:
+          type: integer
+      required:
+      - address
+      - created_at
+      - public_id
+      - total_price
+      - total_products
+      - updated_at
+      - user
+    OrderItem:
+      type: object
+      description: |-
+        Отображение позиций в заказе.
+
+        Включает публичный id, наименование, количество
+        в заказе и суммированную цену каждой позиции.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+          title: Public ID позиции
+        name:
+          type: string
+          readOnly: true
+          title: Наименование в заказе
+        item_quantity:
+          type: integer
+          readOnly: true
+          title: Количество позиций
+        item_total:
+          type: number
+          format: double
+          description: Рассчитывает сумму каждой позиции.
+          readOnly: true
+      required:
+      - item_quantity
+      - item_total
+      - name
+      - public_id
+    OrderRequest:
+      type: object
+      description: |-
+        Отображение и изменение заказа.
+
+        Включает публичный id, краткие данные пользователя,
+        общую стоимость, адрес, статус, даты создания и обновления,
+        а также позиции заказа.
+      properties:
+        user:
+          $ref: '#/components/schemas/ShortUserRequest'
+        address:
+          type: string
+          minLength: 1
+          title: Адрес
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+      required:
+      - address
+      - status
+      - user
+    PaginatedAdminListUserList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/AdminListUser'
+    PaginatedOrderAdminListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderAdminList'
+    PaginatedProductListList:
+      type: object
+      required:
+      - count
+      - results
+      properties:
+        count:
+          type: integer
+          example: 123
+        next:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=4
+        previous:
+          type: string
+          nullable: true
+          format: uri
+          example: http://api.example.org/accounts/?page=2
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/ProductList'
+    PatchedAdminUserRequest:
+      type: object
+      description: |-
+        Подробное отображение, обновления пользователя для админа.
+
+        Включает публичный id, email, имя, баланс,
+        количество заказов, сумму заказов, заказы.
+      properties:
+        total_orders:
+          type: integer
+        total_purchases:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+        is_active:
+          type: boolean
+          default: true
+          title: Активный
+          description: Отметьте, если пользователь должен считаться активным. Уберите
+            эту отметку вместо удаления учётной записи.
+    PatchedChangeEmailRequest:
+      type: object
+      description: |-
+        Смена email.
+
+        Необходимо указать старую почту, пароль и новую почту.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        password:
+          type: string
+          minLength: 1
+        new_email:
+          type: string
+          format: email
+          minLength: 1
+    PatchedChangePasswordRequest:
+      type: object
+      description: |-
+        Смена пароля.
+
+        Необходимо указать код потверждения и новый пароль.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        code:
+          type: string
+          minLength: 1
+          pattern: ^\d{4}$
+        new_password:
+          type: string
+          minLength: 1
+    PatchedOrderRequest:
+      type: object
+      description: |-
+        Отображение и изменение заказа.
+
+        Включает публичный id, краткие данные пользователя,
+        общую стоимость, адрес, статус, даты создания и обновления,
+        а также позиции заказа.
+      properties:
+        user:
+          $ref: '#/components/schemas/ShortUserRequest'
+        address:
+          type: string
+          minLength: 1
+          title: Адрес
+          maxLength: 255
+        status:
+          $ref: '#/components/schemas/StatusEnum'
+    PatchedPatchCartItemRequest:
+      type: object
+      description: Изменение количества позиций одного товара.
+      properties:
+        item_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 1
+          default: 1
+          title: Количество позиций
+    PatchedProductAdminRequest:
+      type: object
+      description: |-
+        Подробное отображение, создание и изменение товара для админа.
+
+        Включает поля ProductAdminList + описание товара.
+
+        Обязательные поля при создании: наименование, описание, цена, количество.
+        Обновить можно те же поля.
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          title: Цена
+        warehouse_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: На складе
+        description:
+          type: string
+          minLength: 1
+          title: Описание
+          maxLength: 1000
+    PatchedProfileRequest:
+      type: object
+      description: |-
+        Отображение и редактирование своего профиля.
+
+        Включает публичный id, email, имя и баланс.
+
+        Обновить можно только имя.
+      properties:
+        first_name:
+          type: string
+          minLength: 2
+          title: Имя
+          maxLength: 50
+    ProductAdmin:
+      type: object
+      description: |-
+        Подробное отображение, создание и изменение товара для админа.
+
+        Включает поля ProductAdminList + описание товара.
+
+        Обязательные поля при создании: наименование, описание, цена, количество.
+        Обновить можно те же поля.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          maxLength: 100
+          minLength: 2
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          title: Цена
+        warehouse_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: На складе
+        is_deleted:
+          type: boolean
+          readOnly: true
+          title: Удален ли
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Дата создания
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          title: Дата обновления
+        deleted_at:
+          type: string
+          format: date-time
+          readOnly: true
+          nullable: true
+          title: Дата удаления
+        description:
+          type: string
+          title: Описание
+          maxLength: 1000
+      required:
+      - created_at
+      - deleted_at
+      - description
+      - is_deleted
+      - name
+      - price
+      - public_id
+      - updated_at
+      - warehouse_quantity
+    ProductAdminRequest:
+      type: object
+      description: |-
+        Подробное отображение, создание и изменение товара для админа.
+
+        Включает поля ProductAdminList + описание товара.
+
+        Обязательные поля при создании: наименование, описание, цена, количество.
+        Обновить можно те же поля.
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 100
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          title: Цена
+        warehouse_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: На складе
+        description:
+          type: string
+          minLength: 1
+          title: Описание
+          maxLength: 1000
+      required:
+      - description
+      - name
+      - price
+      - warehouse_quantity
+    ProductDetail:
+      type: object
+      description: |-
+        Подробное отображение товара для обычного пользователя.
+
+        Включает поля ProductList и описание товара.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          title: Название
+          maxLength: 100
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          title: Цена
+        warehouse_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: На складе
+        is_deleted:
+          type: boolean
+          default: false
+          title: Удален ли
+        description:
+          type: string
+          title: Описание
+          maxLength: 1000
+      required:
+      - description
+      - name
+      - price
+      - public_id
+      - warehouse_quantity
+    ProductDetailRequest:
+      type: object
+      description: |-
+        Подробное отображение товара для обычного пользователя.
+
+        Включает поля ProductList и описание товара.
+      properties:
+        name:
+          type: string
+          minLength: 1
+          title: Название
+          maxLength: 100
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          title: Цена
+        warehouse_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: На складе
+        is_deleted:
+          type: boolean
+          default: false
+          title: Удален ли
+        description:
+          type: string
+          minLength: 1
+          title: Описание
+          maxLength: 1000
+      required:
+      - description
+      - name
+      - price
+      - warehouse_quantity
+    ProductList:
+      type: object
+      description: |-
+        Отображение каталога товаров для обычного пользователя.
+
+        Включает публичный id, наименование, цену,
+        количество на складе и статус удаления.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+        name:
+          type: string
+          title: Название
+          maxLength: 100
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          title: Цена
+        warehouse_quantity:
+          type: integer
+          maximum: 2147483647
+          minimum: 0
+          title: На складе
+        is_deleted:
+          type: boolean
+          default: false
+          title: Удален ли
+      required:
+      - name
+      - price
+      - public_id
+      - warehouse_quantity
+    Profile:
+      type: object
+      description: |-
+        Отображение и редактирование своего профиля.
+
+        Включает публичный id, email, имя и баланс.
+
+        Обновить можно только имя.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          readOnly: true
+        first_name:
+          type: string
+          title: Имя
+          maxLength: 50
+          minLength: 2
+        balance:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,6}(?:\.\d{0,2})?$
+          readOnly: true
+          title: Баланс
+      required:
+      - balance
+      - email
+      - first_name
+      - public_id
+    SendCodeRequest:
+      type: object
+      description: Повторная отправка кода для подтверждения email.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+      required:
+      - email
+    ShortUser:
+      type: object
+      description: |-
+        Краткое отображение пользователя.
+
+        Включает публичный id и email.
+      properties:
+        public_id:
+          type: string
+          readOnly: true
+        email:
+          type: string
+          format: email
+          maxLength: 254
+      required:
+      - email
+      - public_id
+    ShortUserRequest:
+      type: object
+      description: |-
+        Краткое отображение пользователя.
+
+        Включает публичный id и email.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+          maxLength: 254
+      required:
+      - email
+    StatusEnum:
+      enum:
+      - cancelled
+      - pending
+      - completed
+      type: string
+      description: |-
+        * `cancelled` - Отменен
+        * `pending` - В ожидании
+        * `completed` - Завершен
+    TokenObtainPair:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+          readOnly: true
+      required:
+      - access
+      - refresh
+    TokenObtainPairRequest:
+      type: object
+      properties:
+        email:
+          type: string
+          writeOnly: true
+          minLength: 1
+        password:
+          type: string
+          writeOnly: true
+          minLength: 1
+      required:
+      - email
+      - password
+    TokenRefresh:
+      type: object
+      properties:
+        access:
+          type: string
+          readOnly: true
+        refresh:
+          type: string
+      required:
+      - access
+      - refresh
+    TokenRefreshRequest:
+      type: object
+      properties:
+        refresh:
+          type: string
+          minLength: 1
+      required:
+      - refresh
+    VerifyEmailRequest:
+      type: object
+      description: |-
+        Подтверждение указанной пользователем почты.
+
+        Необходимо указать email и код подтверждения.
+      properties:
+        email:
+          type: string
+          format: email
+          minLength: 1
+        code:
+          type: string
+          minLength: 1
+          pattern: ^\d{4}$
+      required:
+      - code
+      - email
+  securitySchemes:
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+tags:
+- name: Аутентификация
+  description: Регистрация и подтверждение пользователя
+- name: Пользователи
+  description: Профиль пользователя и управление балансом
+- name: Товары
+  description: Просмотр и управление товарами магазина
+- name: Корзина
+  description: Просмотр и управление содержимым корзины
+- name: Заказы
+  description: Просмотр и управление заказами

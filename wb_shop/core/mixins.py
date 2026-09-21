@@ -23,3 +23,13 @@ class PublicIdMixin(models.Model):
 
     class Meta:
         abstract = True
+
+
+class AdminAddDeleteMixin:
+    def has_add_permission(self, request, obj=None):
+        """Запрещает добавление новых объектов."""
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        """Запрещает удаление объектов."""
+        return False

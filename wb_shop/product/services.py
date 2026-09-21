@@ -102,9 +102,9 @@ class CartOrderService:
         user.save(update_fields=['balance'])
 
         logger.info(
-            'Создан заказ %s пользователем %s',
-            order.public_id,
-            user.public_id,
+            'Создан заказ с id %s пользователем c id %s',
+            order.id,
+            user.id,
         )
 
         return order

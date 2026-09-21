@@ -11,6 +11,7 @@ class CartConstants:
 class OrderConstants:
     ADDRESS_MAX_LENGTH = 255
     ADDRESS_MIN_LENGTH = 3
+    NO_ITEMS = 0
     PRODUCTS_IN_ORDER_MIN = 1
 
 

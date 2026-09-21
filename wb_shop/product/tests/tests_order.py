@@ -329,8 +329,8 @@ def test_admin_can_get_all_orders(
     assert inactive_user_order.public_id in order_ids, (
         'Заказ другого пользователя отсутствует'
     )
-    assert order_data['total_products'] == TCartCon.CART_ITEM_ONE, (
-        'Неверное количество продуктов'
+    assert order_data['total_products'] == order_item.item_quantity, (
+        'Неверное общее количество позиций в заказе'
     )
 
 

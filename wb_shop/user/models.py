@@ -82,9 +82,10 @@ class User(PublicIdMixin, CreatedUpdatedMixin, AbstractUser):
         db_table = 'user'
         verbose_name = 'Пользователь'
         verbose_name_plural = 'Пользователи'
+        ordering = ['email']
 
     def __str__(self) -> str:
-        return f'{self.first_name} | {self.email}'
+        return f'{self.email}'
 
     def __repr__(self) -> str:
         return f'<User(id={self.id}, email={self.email})>'
