@@ -1,6 +1,16 @@
 from decimal import Decimal
 
 
+class AdminConstants:
+    NO_EXTRA = 0
+
+
+class LoggingConstants:
+    BACKUP_COUNT = 5
+    CONFIG_VERSION = 1
+    FILE_MAX_SIZE = 10 * 1024 * 1024
+
+
 class MoneyConstants:
     CARD_CVC_LENGTH = 3
     CARD_NUMBER_TEST_LENGTH = 5
@@ -9,12 +19,6 @@ class MoneyConstants:
     NO_MONEY = Decimal('0.00')
     PRICE_MIN_VALUE = Decimal('1.00')
     TOTAL_PRICE_MIN_VALUE = Decimal('1.00')
-
-
-class LoggingConstants:
-    BACKUP_COUNT = 5
-    CONFIG_VERSION = 1
-    FILE_MAX_SIZE = 10 * 1024 * 1024
 
 
 class PublicIdConstants:

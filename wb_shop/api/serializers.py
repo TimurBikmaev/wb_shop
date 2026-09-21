@@ -87,7 +87,16 @@ class ProductAdminSerializer(ExcudeNoneSerializerMixin):
 
     class Meta(ProductAdminListSerializer.Meta):
         fields = ProductAdminListSerializer.Meta.fields + ['description']
-        read_only_fields = ['is_deleted']
+        read_only_fields = ['is_deleted', 'deleted_at']
+
+    def validate_name(self, value):
+        """Нельзя дублировать название товара."""
+        super().validate(value)
+
+        if Product.objects.filter(name=value).exists():
+            raise ValidationError('Товар с таким названием уже существует')
+
+        return value
 
 
 class PatchCartItemSerializer(serializers.ModelSerializer):

@@ -21,6 +21,7 @@ class ProductConstants:
     NAME_MIN_LENGTH = 2
     NAME_SHORT = 20
     NOT_IN_WAREHOUSE = 0
+    NEVER_BOUGHT = 0
 
 
 class Status(TextChoices):

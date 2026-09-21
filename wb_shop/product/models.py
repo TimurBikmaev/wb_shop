@@ -40,7 +40,7 @@ class Product(PublicIdMixin, CreatedUpdatedMixin):
         validators=[MinValueValidator(MoneyConstants.PRICE_MIN_VALUE)],
     )
     warehouse_quantity = models.PositiveIntegerField(
-        'Количество',
+        'На складе',
         validators=[MinValueValidator(ProductConstants.NOT_IN_WAREHOUSE)],
     )
     is_deleted = models.BooleanField('Удален ли', default=False)
@@ -48,7 +48,6 @@ class Product(PublicIdMixin, CreatedUpdatedMixin):
         'Дата удаления',
         null=True,
         blank=True,
-        editable=False,
     )
 
     class Meta:
