@@ -814,7 +814,10 @@ class ProductViewSet(HttpLookupMixin, ModelViewSet):
             if param is not None and param == 'true':
                 return Product.objects.filter(is_deleted=True)
 
-            elif param is not None and param == 'all':
+            elif (
+                (param is not None and param == 'all')
+                or self.action == 'retrieve'
+            ):
                 return Product.objects.all()
 
         return Product.objects.filter(is_deleted=False)
