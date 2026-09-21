@@ -126,6 +126,7 @@ API documentation: **drf-spectacular (Swagger / OpenAPI)**.
 ├── README.md                 # Документация проекта
 └── wb_shop                   # Django-проект
     ├── Dockerfile            # Сборка образа бэкенда (Django-проекта)
+    ├── .env                  # Секреты проекта (запушены по требованию тестового задания)
     ├── api                   # API-слой
     │   ├── __init__.py
     │   ├── apps.py
