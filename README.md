@@ -203,7 +203,7 @@ API documentation: **drf-spectacular (Swagger / OpenAPI)**.
 
 ```bash
 git clone https://github.com/TimurBikmaev/wb_shop.git
-cd wb_shop  # Перейдите в директорию проекта
+cd wb_shop/wb_shop  # Перейдите в директорию проекта
 ```
 
 ### 2. Запуск Docker Compose (запустит Django-проект и PostgreSQL)
