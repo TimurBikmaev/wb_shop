@@ -229,7 +229,7 @@ docker compose up --build -d
 
 Ссылка в проекте: https://github.com/TimurBikmaev/wb_shop/blob/main/wb_shop/docs/wb_shop.yaml.
 
-Адрес при локальной разработке: http://localhost:8000/docs/.
+Адрес при локальной разработке: http://localhost:8000/api/v1/docs/.
 
 ## Тестирование
 
